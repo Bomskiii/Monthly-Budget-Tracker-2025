@@ -204,7 +204,7 @@ function setupEventListeners() {
         }
 
         if (target.id === 'logout-btn') {
-            cleanupListeners(); // FIX: Clean up listeners before signing out
+            cleanupListeners();
             signOut(auth).catch(err => console.error("Logout Error:", err));
         }
 
@@ -308,7 +308,7 @@ function initializeFirebase() {
                 state.currentView = 'app';
                 setupSnapshots();
             } else {
-                cleanupListeners(); // FIX: Clean up when user is null
+                cleanupListeners();
                 if (viewOnlyUserId) {
                     state.isEditor = false;
                     state.viewOnlyUserId = viewOnlyUserId;
@@ -352,7 +352,7 @@ function setupSnapshots() {
         return;
     }
 
-    cleanupListeners(); // Clean up old listeners before creating new ones
+    cleanupListeners();
 
     const monthlyCollectionPath = `users/${userIdToFetch}/monthlyBudgets`;
     monthlyUnsubscribe = onSnapshot(query(collection(db, monthlyCollectionPath)), (snapshot) => {
