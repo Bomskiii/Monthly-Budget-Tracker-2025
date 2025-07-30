@@ -3,42 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Budget Tracker</title>
+    <title>Monthly Budget Tracker</title>
     
-    <!-- Tailwind CSS for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link to the external CSS file -->
+    <link rel="stylesheet" href="style.css">
     
     <!-- Chart.js for the pie chart visualization -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <style>
-        /* A simple style for the analysis modal content */
-        .analysis-content {
-            white-space: pre-wrap;
-            line-height: 1.6;
-        }
-        .analysis-content h1, .analysis-content h2, .analysis-content h3 {
-            font-weight: bold;
-            margin-top: 1rem;
-            margin-bottom: 0.5rem;
-        }
-        .analysis-content ul {
-            list-style-position: inside;
-            padding-left: 1rem;
-        }
-        .hidden {
-            display: none;
-        }
-    </style>
 </head>
-<body class="bg-gray-900 text-gray-100 font-sans">
+<body>
 
     <!-- The main container for the application -->
     <div id="app-container">
         <!-- The application will be rendered here by JavaScript -->
-        <div class="text-center p-8">
-            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-500 mx-auto"></div>
-            <p class="mt-4 text-white text-lg">Loading Application...</p>
+        <div class="loader-container">
+            <div class="loader"></div>
+            <p class="loader-text">Loading Application...</p>
         </div>
     </div>
 
