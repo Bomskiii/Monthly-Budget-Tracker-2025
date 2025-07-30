@@ -142,25 +142,27 @@ function renderAuthView() {
 }
 
 function renderAppView() {
-    let mainContent = '';
+    let appContent = '';
 
     if (state.isLoading) {
-        mainContent = `<div class="loader-container"><div class="loader"></div><p class="loader-text">Loading Data...</p></div>`;
+        appContent = `<div class="loader-container"><div class="loader"></div><p class="loader-text">Loading Data...</p></div>`;
     } else {
-        // This part was missing the full structure
         const selectedMonthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
         
-        mainContent += `<div class="mb-8">
-                            <label for="month-select" class="block text-lg font-medium text-gray-300 mb-2">Select Budget Month:</label>
-                            <select id="month-select" class="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                ${state.monthlyBudgets.map(b => `<option value="${b.id}" ${b.id === state.selectedMonthId ? 'selected' : ''}>${b.title} (${b.code}) - Created: ${formatDate(b.createdAt)}</option>`).join('')}
-                            </select>
-                        </div>`;
-
-        if (selectedMonthlyBudget) {
-            // Render overview, charts, etc.
+        if (state.monthlyBudgets.length > 0 && selectedMonthlyBudget) {
+            // Main view when budgets exist
+            appContent = `
+                <div class="mb-8">
+                    <label for="month-select" class="block text-lg font-medium text-gray-300 mb-2">Select Budget Month:</label>
+                    <select id="month-select" class="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        ${state.monthlyBudgets.map(b => `<option value="${b.id}" ${b.id === state.selectedMonthId ? 'selected' : ''}>${b.title} (${b.code}) - Created: ${formatDate(b.createdAt)}</option>`).join('')}
+                    </select>
+                </div>
+                <!-- Overview, Chart, and Category content will be rendered here -->
+            `;
         } else {
-            mainContent += `
+            // View for new users with no budgets
+            appContent = `
                 <div class="text-center p-10 bg-gray-800 rounded-lg">
                     <h3 class="text-xl text-white">No monthly budgets created yet.</h3>
                     ${state.isEditor ? '<p class="text-gray-400">Use the form above to create your first one.</p>' : ''}
@@ -178,7 +180,7 @@ function renderAppView() {
                     </div>
                 </header>
                 ${state.isEditor ? `<!-- Add Monthly Budget Form will be rendered here -->` : ''}
-                <main id="app-content">${mainContent}</main>
+                <main id="app-content">${appContent}</main>
             </div>`;
 }
 
