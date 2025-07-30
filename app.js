@@ -133,14 +133,14 @@ function renderAddOrEditBudgetForm() {
         <div class="form-grid">
             <div class="col-span-2"><label for="budget-title">Budget Title</label><input type="text" id="budget-title" name="title" value="${budget?.title || ''}" placeholder="e.g., Q3 Marketing" required></div>
             <div><label for="nomer-pengajuan">Nomer Pengajuan</label><input type="text" id="nomer-pengajuan" name="nomerPengajuan" value="${budget?.nomerPengajuan || ''}" placeholder="e.g., NP-001" required></div>
-            <div><label for="creation-date">Creation Date</label><input type="date" id="creation-date" name="creationDate" value="${toInputDate(budget?.creationDate)}" required></div>
+            <div><label for="approval-date">Approval Date</label><input type="date" id="approval-date" name="approvalDate" value="${toInputDate(budget?.approvalDate)}" required></div>
             <div><label for="total-budget">Total Budget Amount</label><input type="number" id="total-budget" name="totalBudget" value="${budget?.totalBudget || ''}" placeholder="e.g., 5000000" required></div>
             <div class="col-span-2">
                 <label for="approval-doc">Proof of Approval (PDF, JPG, PNG - Max 5MB)</label>
                 <div class="custom-file-input">
                     <input type="file" id="approval-doc" name="approvalDoc" accept=".pdf,.jpg,.jpeg,.png">
                     <label for="approval-doc" class="file-input-label">
-                        <span class="file-input-text">Upload proof of receipt here...</span>
+                        <span class="file-input-text">Upload proof of approval...</span>
                         <span class="file-input-button">Choose File</span>
                     </label>
                 </div>
@@ -211,7 +211,6 @@ function renderCategorySection(monthlyBudget) {
 
         const totalExpenses = cat.expenses ? cat.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
         const remaining = cat.budget - totalExpenses;
-        const overBudgetHtml = `<span class="value negative">Over Budget by ${formatCurrency(Math.abs(remaining))}</span>`;
         const color = CHART_COLORS[index % CHART_COLORS.length];
 
         return `
@@ -234,12 +233,12 @@ function renderCategorySection(monthlyBudget) {
                         ${cat.expenses && cat.expenses.map(exp => {
                             const isEditingExp = state.editingItem?.type === 'expense' && state.editingItem.id === exp.id;
                             if (isEditingExp) {
-                                return `<li style="padding: 1rem; background-color: var(--bg-med); border-radius: var(--border-radius); border: 1px solid var(--border-color);"><form class="edit-expense-form" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" placeholder="Description" required><div class="form-grid"><input type="number" name="amount" value="${exp.amount}" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(exp.date)}" min="${toInputDate(monthlyBudget.creationDate)}" required></div><div class="custom-file-input"><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><label class="file-input-label"><span class="file-input-text">Upload receipt...</span><span class="file-input-button">Choose File</span></label></div>${exp.receiptUrl ? `<div style="margin-top: 0.25rem; font-size: 0.75rem;">Current: <a href="${exp.receiptUrl}" target="_blank" class="btn-link">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="btn btn-sm">Cancel</button></div></form></li>`;
+                                return `<li style="padding: 1rem; background-color: var(--bg-med); border-radius: var(--border-radius); border: 1px solid var(--border-color);"><form class="edit-expense-form" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" placeholder="Description" required><div class="form-grid"><input type="number" name="amount" value="${exp.amount}" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(exp.date)}" min="${toInputDate(monthlyBudget.approvalDate)}" required></div><div class="custom-file-input"><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><label class="file-input-label"><span class="file-input-text">Upload receipt...</span><span class="file-input-button">Choose File</span></label></div>${exp.receiptUrl ? `<div style="margin-top: 0.25rem; font-size: 0.75rem;">Current: <a href="${exp.receiptUrl}" target="_blank" class="btn-link">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="btn btn-sm">Cancel</button></div></form></li>`;
                             }
                             return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${cat.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-expense" data-category-id="${cat.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
                         }).join('') || `<li class="text-sm text-gray-400">No expenses added yet.</li>`}
                     </ul>
-                    ${state.isEditor ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" min="${toInputDate(monthlyBudget.creationDate)}" required></div><div class="custom-file-input"><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><label class="file-input-label"><span class="file-input-text">Upload receipt...</span><span class="file-input-button">Choose File</span></label></div><button type="submit" class="btn btn-sm" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add Expense'}</button></form>` : ''}
+                    ${state.isEditor ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" min="${toInputDate(monthlyBudget.approvalDate)}" required></div><div class="custom-file-input"><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><label class="file-input-label"><span class="file-input-text">Upload receipt...</span><span class="file-input-button">Choose File</span></label></div><button type="submit" class="btn btn-sm" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add Expense'}</button></form>` : ''}
                 </div>
             </div>`;
     }).join('');
@@ -306,7 +305,7 @@ function renderAppView() {
         <header>
             <div>
                 <h1>${selectedMonthlyBudget ? selectedMonthlyBudget.title : 'Budget Tracker'}</h1>
-                ${selectedMonthlyBudget ? `<p class="page-subtitle">Nomer Pengajuan: ${selectedMonthlyBudget.nomerPengajuan}</p>` : ''}
+                ${selectedMonthlyBudget ? `<p class="page-subtitle">Nomer Pengajuan: ${selectedMonthlyBudget.nomerPengajuan} | Approved: ${formatDate(selectedMonthlyBudget.approvalDate)}</p>` : ''}
             </div>
             <div class="header-actions">
                 ${state.isEditor ? `<button class="btn btn-primary" data-action="add-budget">${ICONS.plus} New Budget</button>` : ''}
@@ -533,7 +532,7 @@ async function handleFormSubmit(form) {
                 if (!state.user) throw new Error("You must be logged in.");
                 const file = formData.get('approvalDoc');
                 const uploadResult = await handleFileUpload(file);
-                const newDocRef = await addDoc(collection(db, `users/${state.user.uid}/monthlyBudgets`), { title: data.title, nomerPengajuan: data.nomerPengajuan, totalBudget: Number(data.totalBudget), owner: state.user.uid, creationDate: Timestamp.fromDate(new Date(data.creationDate)), approvalDocUrl: uploadResult?.url || null, approvalDocName: uploadResult?.name || null });
+                const newDocRef = await addDoc(collection(db, `users/${state.user.uid}/monthlyBudgets`), { title: data.title, nomerPengajuan: data.nomerPengajuan, totalBudget: Number(data.totalBudget), owner: state.user.uid, approvalDate: Timestamp.fromDate(new Date(data.approvalDate)), approvalDocUrl: uploadResult?.url || null, approvalDocName: uploadResult?.name || null });
                 state.selectedMonthId = newDocRef.id;
                 state.editingItem = null;
                 break;
@@ -543,7 +542,7 @@ async function handleFormSubmit(form) {
                 const file = formData.get('approvalDoc');
                 const uploadResult = await handleFileUpload(file);
                 const docRef = doc(db, `users/${state.user.uid}/monthlyBudgets`, state.editingItem.id);
-                const updateData = { title: data.title, nomerPengajuan: data.nomerPengajuan, totalBudget: Number(data.totalBudget), creationDate: Timestamp.fromDate(new Date(data.creationDate)) };
+                const updateData = { title: data.title, nomerPengajuan: data.nomerPengajuan, totalBudget: Number(data.totalBudget), approvalDate: Timestamp.fromDate(new Date(data.approvalDate)) };
                 if (uploadResult) { updateData.approvalDocUrl = uploadResult.url; updateData.approvalDocName = uploadResult.name; }
                 await updateDoc(docRef, updateData);
                 state.editingItem = null;
@@ -566,8 +565,8 @@ async function handleFormSubmit(form) {
                     const categoryId = form.dataset.categoryId;
                     if (!state.user || !categoryId) return;
                     const monthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
-                    if (new Date(data.date) < monthlyBudget.creationDate.toDate()) {
-                        throw new Error("Expense date cannot be before the budget's creation date.");
+                    if (new Date(data.date) < monthlyBudget.approvalDate.toDate()) {
+                        throw new Error("Expense date cannot be before the budget's approval date.");
                     }
                     const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
                     if (totalSpent + Number(data.amount) > monthlyBudget.totalBudget) {
@@ -591,8 +590,8 @@ async function handleFormSubmit(form) {
                 } else if (form.classList.contains('edit-expense-form')) {
                     const { categoryId, expenseId } = form.dataset;
                     const monthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
-                    if (new Date(data.date) < monthlyBudget.creationDate.toDate()) {
-                        throw new Error("Expense date cannot be before the budget's creation date.");
+                    if (new Date(data.date) < monthlyBudget.approvalDate.toDate()) {
+                        throw new Error("Expense date cannot be before the budget's approval date.");
                     }
                     const currentExpense = state.categories.find(c => c.id === categoryId)?.expenses.find(e => e.id === expenseId);
                     const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
@@ -634,7 +633,7 @@ function handleDownloadCSV() {
     csvContent += "Monthly Budget Report\n";
     csvContent += `Title,"${budget.title}"\n`;
     csvContent += `Nomer Pengajuan,"${budget.nomerPengajuan}"\n`;
-    csvContent += `Creation Date,"${formatDate(budget.creationDate)}"\n`;
+    csvContent += `Approval Date,"${formatDate(budget.approvalDate)}"\n`;
     csvContent += `Total Budget,"${budget.totalBudget}"\n`;
     csvContent += `Approval Document,"${budget.approvalDocUrl || 'N/A'}"\n\n`;
     csvContent += "Category,Expense,Amount,Date,Receipt\n";
@@ -711,7 +710,7 @@ function setupSnapshots() {
     cleanupListeners();
     state.isLoading = true;
     
-    const budgetsQuery = query(collection(db, `users/${userIdToFetch}/monthlyBudgets`), orderBy("creationDate", "desc"));
+    const budgetsQuery = query(collection(db, `users/${userIdToFetch}/monthlyBudgets`), orderBy("approvalDate", "desc"));
 
     monthlyUnsubscribe = onSnapshot(budgetsQuery, (snapshot) => {
         const previousSelectedId = state.selectedMonthId;
