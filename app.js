@@ -13,6 +13,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstati
 // --- GLOBAL STATE & CONFIG ---
 let db, storage, auth;
 let chartInstance = null;
+let isInitialized = false;
 
 const state = {
     currentView: 'loading', // loading, auth, app
@@ -222,6 +223,12 @@ function setupEventListeners() {
 
     appContainer.addEventListener('submit', (e) => {
         e.preventDefault();
+        if (!isInitialized) {
+            state.error = "Application is still initializing, please wait.";
+            render();
+            return;
+        }
+
         const formId = e.target.id;
         const formData = new FormData(e.target);
         const data = Object.fromEntries(formData.entries());
@@ -268,6 +275,7 @@ function initializeFirebase() {
         db = getFirestore(app);
         storage = getStorage(app);
         auth = getAuth(app);
+        isInitialized = true; // Set flag to true
 
         onAuthStateChanged(auth, (user) => {
             const urlParams = new URLSearchParams(window.location.search);
