@@ -7,12 +7,13 @@ import {
     sendPasswordResetEmail,
     signOut
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, query, where, Timestamp, arrayUnion, arrayRemove, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, query, where, Timestamp, arrayUnion, arrayRemove, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- GLOBAL STATE & CONFIG ---
 let db, auth, storage;
-let chartInstance = null;
+let monthlyChartInstance = null;
+let expenseChartInstance = null;
 let isFirebaseInitialized = false;
 
 const state = {
@@ -24,11 +25,14 @@ const state = {
     monthlyBudgets: [],
     selectedMonthId: '',
     categories: [],
+    selectedCategoryId: null, // For detail view
     isLoading: true,
     editingItem: null, // { type, id, ... }
     sortConfig: { key: 'name', direction: 'asc' },
     isUploading: false
 };
+
+const CHART_COLORS = ['#58a6ff', '#9333ea', '#db2777', '#d29922', '#3fb950', '#f85149', '#8b949e'];
 
 // --- ICONS ---
 const ICONS = {
@@ -77,7 +81,11 @@ function render() {
     if (state.currentView === 'app' && state.selectedMonthId) {
         const selectedMonthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
         if (selectedMonthlyBudget) {
-            renderChartJS(selectedMonthlyBudget);
+            renderMonthlyChart(selectedMonthlyBudget);
+            if (state.selectedCategoryId) {
+                const category = state.categories.find(c => c.id === state.selectedCategoryId);
+                if (category) renderExpenseChart(category);
+            }
         }
     }
     window.scrollTo(scrollPosition.x, scrollPosition.y);
@@ -167,7 +175,7 @@ function renderDashboard(budget) {
             </div>
             <div class="card">
                  <h3 style="font-size: 1.25rem; font-weight: 600; margin:0 0 1rem 0;">Spending Chart</h3>
-                <canvas id="budget-chart" style="max-height: 200px;"></canvas>
+                <canvas id="monthly-chart" style="max-height: 200px; cursor: pointer;"></canvas>
             </div>
         </div>`;
 }
@@ -182,7 +190,7 @@ function renderCategorySection(monthlyBudget) {
         return (a.budget - b.budget) * dir;
     });
 
-    const categoryListHtml = sortedCategories.map(cat => {
+    const categoryListHtml = sortedCategories.map((cat, index) => {
         const isEditingCat = state.editingItem?.type === 'category' && state.editingItem.id === cat.id;
         if (isEditingCat) {
             return `<form class="edit-category-form card" data-id="${cat.id}"><h4 style="font-size: 1.125rem; font-weight: 700; margin:0 0 1rem 0;">Edit Category</h4><div class="form-grid"><input type="text" name="name" value="${cat.name}" required><input type="number" name="budget" value="${cat.budget || ''}" placeholder="Category Budget" required></div><div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm">Save</button><button type="button" data-action="cancel-edit" class="btn btn-sm">Cancel</button></div></form>`;
@@ -190,32 +198,36 @@ function renderCategorySection(monthlyBudget) {
 
         const totalExpenses = cat.expenses ? cat.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
         const remaining = cat.budget - totalExpenses;
-        const overBudgetHtml = `<span class="negative">Over Budget by ${formatCurrency(Math.abs(remaining))}</span>`;
+        const overBudgetHtml = `<span class="value negative">Over Budget by ${formatCurrency(Math.abs(remaining))}</span>`;
+        const color = CHART_COLORS[index % CHART_COLORS.length];
 
         return `
             <div class="category-card">
-                <div class="category-card-header">
-                    <h4>${cat.name}</h4>
-                    <div class="actions">
-                        ${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="category" data-id="${cat.id}" title="Edit Category">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-category" data-id="${cat.id}" title="Delete Category">${ICONS.trash}</button>` : ''}
+                <div class="category-color-bar" style="background-color: ${color};"></div>
+                <div class="category-card-content">
+                    <div class="category-card-header">
+                        <h4>${cat.name}</h4>
+                        <div class="actions">
+                            ${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="category" data-id="${cat.id}" title="Edit Category">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-category" data-id="${cat.id}" title="Delete Category">${ICONS.trash}</button>` : ''}
+                        </div>
                     </div>
+                    <div class="category-budget-info">
+                        <div>Total Budget<span>${formatCurrency(cat.budget)}</span></div>
+                        <div>Used<span>${formatCurrency(totalExpenses)}</span></div>
+                        <div>${remaining < 0 ? overBudgetHtml : `Remaining<span class="value positive">${formatCurrency(remaining)}</span>`}</div>
+                    </div>
+                    ${renderProgressBar(totalExpenses, cat.budget)}
+                    <ul class="expense-list">
+                        ${cat.expenses && cat.expenses.map(exp => {
+                            const isEditingExp = state.editingItem?.type === 'expense' && state.editingItem.id === exp.id;
+                            if (isEditingExp) {
+                                return `<li style="padding: 1rem; background-color: var(--bg-med); border-radius: var(--border-radius); border: 1px solid var(--border-color);"><form class="edit-expense-form" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" placeholder="Description" required><div class="form-grid"><input type="number" name="amount" value="${exp.amount}" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(exp.date)}" min="${toInputDate(monthlyBudget.creationDate)}" required></div><input type="file" name="receipt">${exp.receiptUrl ? `<div style="margin-top: 0.25rem; font-size: 0.75rem;">Current: <a href="${exp.receiptUrl}" target="_blank" class="btn-link">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="btn btn-sm">Cancel</button></div></form></li>`;
+                            }
+                            return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${cat.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-expense" data-category-id="${cat.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
+                        }).join('') || `<li class="text-sm text-gray-400">No expenses added yet.</li>`}
+                    </ul>
+                    ${state.isEditor ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" min="${toInputDate(monthlyBudget.creationDate)}" required></div><input type="file" name="receipt"><button type="submit" class="btn btn-sm" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add Expense'}</button></form>` : ''}
                 </div>
-                <div class="category-budget-info">
-                    <div>Total Budget<span>${formatCurrency(cat.budget)}</span></div>
-                    <div>Used<span>${formatCurrency(totalExpenses)}</span></div>
-                    <div>${remaining < 0 ? overBudgetHtml : `Remaining<span class="positive">${formatCurrency(remaining)}</span>`}</div>
-                </div>
-                ${renderProgressBar(totalExpenses, cat.budget)}
-                <ul class="expense-list">
-                    ${cat.expenses && cat.expenses.map(exp => {
-                        const isEditingExp = state.editingItem?.type === 'expense' && state.editingItem.id === exp.id;
-                        if (isEditingExp) {
-                            return `<li style="padding: 1rem; background-color: var(--bg-med); border-radius: var(--border-radius); border: 1px solid var(--border-color);"><form class="edit-expense-form" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" placeholder="Description" required><div class="form-grid"><input type="number" name="amount" value="${exp.amount}" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(exp.date)}" min="${toInputDate(monthlyBudget.creationDate)}" required></div><input type="file" name="receipt">${exp.receiptUrl ? `<div style="margin-top: 0.25rem; font-size: 0.75rem;">Current: <a href="${exp.receiptUrl}" target="_blank" class="btn-link">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="btn btn-sm">Cancel</button></div></form></li>`;
-                        }
-                        return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${cat.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-expense" data-category-id="${cat.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
-                    }).join('') || `<li class="text-sm text-gray-400">No expenses added yet.</li>`}
-                </ul>
-                ${state.isEditor ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" min="${toInputDate(monthlyBudget.creationDate)}" required></div><input type="file" name="receipt"><button type="submit" class="btn btn-sm" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add Expense'}</button></form>` : ''}
             </div>`;
     }).join('');
 
@@ -230,8 +242,44 @@ function renderCategorySection(monthlyBudget) {
                 </div>
             </div>
             ${state.isEditor ? `<form id="add-category-form" class="card" style="margin-bottom: 1.5rem;"><div class="form-grid"><input type="text" name="name" placeholder="New category name" required><input type="number" name="budget" placeholder="Budget" required></div><button type="submit" class="btn btn-primary" style="margin-top: 1rem;">${ICONS.plus} Add Category</button></form>` : ''}
-            <div class="category-list">${categoryListHtml || '<p style="color: var(--text-med);">No categories added yet.</p>'}</div>
+            <div class="category-list">${categoryListHtml}</div>
         </div>`;
+}
+
+function renderCategoryDetailView(category, monthlyBudget) {
+    const totalExpenses = category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
+    const remaining = category.budget - totalExpenses;
+    const overBudgetHtml = `<span class="value negative">Over Budget by ${formatCurrency(Math.abs(remaining))}</span>`;
+
+    return `
+        <div style="margin-bottom: 1.5rem;">
+            <button class="btn" data-action="back-to-all-categories">${ICONS.back || '&larr;'} Back to All Categories</button>
+        </div>
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3 style="font-size: 1.25rem; font-weight: 600; margin:0 0 1rem 0;">${category.name} Details</h3>
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="label">Category Budget</div><div class="value positive">${formatCurrency(category.budget)}</div></div>
+                    <div class="stat-card"><div class="label">Spent</div><div class="value neutral">${formatCurrency(totalExpenses)}</div></div>
+                    <div class="stat-card">${remaining < 0 ? overBudgetHtml : `Remaining<div class="value positive">${formatCurrency(remaining)}</div>`}</div>
+                </div>
+                ${renderProgressBar(totalExpenses, category.budget)}
+            </div>
+            <div class="card">
+                 <h3 style="font-size: 1.25rem; font-weight: 600; margin:0 0 1rem 0;">Expense Breakdown</h3>
+                <canvas id="expense-chart" style="max-height: 200px;"></canvas>
+            </div>
+        </div>
+        <div class="card" style="margin-top: 1.5rem;">
+            <h3 style="font-size: 1.5rem; font-weight: 700; margin:0 0 1.5rem 0;">Expenses</h3>
+            <ul class="expense-list">
+                ${category.expenses && category.expenses.length > 0 ? category.expenses.map(exp => {
+                    // This part is duplicated, can be refactored later
+                     return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${category.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-expense" data-category-id="${category.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
+                }).join('') : `<li class="text-sm text-gray-400">No expenses added yet.</li>`}
+            </ul>
+        </div>
+    `;
 }
 
 function renderAppView() {
@@ -258,16 +306,21 @@ function renderAppView() {
     if (state.editingItem?.type === 'budget') {
         mainContent = renderAddOrEditBudgetForm();
     } else if (selectedMonthlyBudget) {
-        mainContent = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-                <div style="flex-grow: 1;"><label for="month-select">Select Budget:</label><select id="month-select">${state.monthlyBudgets.map(b => `<option value="${b.id}" ${b.id === state.selectedMonthId ? 'selected' : ''}>${b.title} (${b.nomerPengajuan})</option>`).join('')}</select></div>
-                <div style="display: flex; gap: 0.5rem;">
-                    <button class="btn btn-icon" data-action="edit-item" data-type="budget" data-id="${selectedMonthlyBudget.id}" title="Edit Current Budget">${ICONS.edit}</button>
-                    <button id="download-csv-btn" class="btn btn-icon" title="Download Report">${ICONS.download}</button>
+        if (state.selectedCategoryId) {
+            const category = state.categories.find(c => c.id === state.selectedCategoryId);
+            mainContent = category ? renderCategoryDetailView(category, selectedMonthlyBudget) : renderCategorySection(selectedMonthlyBudget);
+        } else {
+            mainContent = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <div style="flex-grow: 1;"><label for="month-select">Select Budget:</label><select id="month-select">${state.monthlyBudgets.map(b => `<option value="${b.id}" ${b.id === state.selectedMonthId ? 'selected' : ''}>${b.title} (${b.nomerPengajuan})</option>`).join('')}</select></div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-icon" data-action="edit-item" data-type="budget" data-id="${selectedMonthlyBudget.id}" title="Edit Current Budget">${ICONS.edit}</button>
+                        <button id="download-csv-btn" class="btn btn-icon" title="Download Report">${ICONS.download}</button>
+                    </div>
                 </div>
-            </div>
-            ${renderDashboard(selectedMonthlyBudget)}
-            ${renderCategorySection(selectedMonthlyBudget)}`;
+                ${renderDashboard(selectedMonthlyBudget)}
+                ${renderCategorySection(selectedMonthlyBudget)}`;
+        }
     } else {
         mainContent = `<div class="text-center p-10 card"><h3 style="font-size: 1.25rem;">No monthly budgets found.</h3>${state.isEditor ? `<p style="color: var(--text-med); margin-top: 0.5rem;">Click "New Budget" to get started.</p>` : ''}</div>`;
     }
@@ -275,10 +328,10 @@ function renderAppView() {
     return `<div class="app-main-container">${headerHtml}<main id="app-content">${mainContent}</main></div>`;
 }
 
-function renderChartJS(budget) {
-    const ctx = document.getElementById('budget-chart');
+function renderMonthlyChart(budget) {
+    const ctx = document.getElementById('monthly-chart');
     if (!ctx) return;
-    if (chartInstance) chartInstance.destroy();
+    if (monthlyChartInstance) monthlyChartInstance.destroy();
     
     const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
     const remaining = budget.totalBudget - totalSpent;
@@ -290,7 +343,28 @@ function renderChartJS(budget) {
         data.push(remaining);
     }
 
-    chartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: labels.length > 0 ? labels : ['No Data'], datasets: [{ label: 'Amount', data: data.length > 0 ? data : [1], backgroundColor: ['#58a6ff', '#9333ea', '#db2777', '#d29922', '#3fb950', '#f85149', '#8b949e'], borderColor: '#161b22', borderWidth: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => `${context.label || ''}: ${formatCurrency(context.parsed)}` } } } } });
+    monthlyChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ label: 'Amount', data: data, backgroundColor: [...CHART_COLORS, '#30363d'], borderColor: '#161b22', borderWidth: 4 }] }, options: { responsive: true, maintainAspectRatio: false, onClick: (e, elements) => {
+        if (elements.length > 0) {
+            const clickedIndex = elements[0].index;
+            const clickedLabel = labels[clickedIndex];
+            const category = state.categories.find(c => c.name === clickedLabel);
+            if (category) {
+                state.selectedCategoryId = category.id;
+                render();
+            }
+        }
+    }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => `${context.label || ''}: ${formatCurrency(context.parsed)}` } } } } });
+}
+
+function renderExpenseChart(category) {
+    const ctx = document.getElementById('expense-chart');
+    if (!ctx) return;
+    if (expenseChartInstance) expenseChartInstance.destroy();
+
+    const labels = category.expenses.map(e => e.description);
+    const data = category.expenses.map(e => e.amount);
+
+    expenseChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ label: 'Amount', data: data, backgroundColor: CHART_COLORS, borderColor: '#161b22', borderWidth: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => `${context.label || ''}: ${formatCurrency(context.parsed)}` } } } } });
 }
 
 function showModal(title, message) {
@@ -330,6 +404,7 @@ function attachEventListeners() {
         else if (action === 'edit-item') { state.editingItem = { type: target.dataset.type, id: target.dataset.id, categoryId: target.dataset.categoryId }; render(); }
         else if (action === 'add-budget') { state.editingItem = { type: 'budget', id: null }; render(); }
         else if (action === 'cancel-edit') { state.editingItem = null; render(); }
+        else if (action === 'back-to-all-categories') { state.selectedCategoryId = null; render(); }
         else if (action === 'sort') {
             const key = target.dataset.key;
             if (state.sortConfig.key === key) {
@@ -349,7 +424,7 @@ function attachEventListeners() {
     }
     appContainer.onsubmit = function(e) { e.preventDefault(); handleFormSubmit(e.target); };
     appContainer.onchange = function(e) {
-        if (e.target.id === 'month-select') { state.selectedMonthId = e.target.value; setupCategorySnapshot(); }
+        if (e.target.id === 'month-select') { state.selectedMonthId = e.target.value; state.selectedCategoryId = null; setupCategorySnapshot(); }
     };
 }
 
@@ -452,8 +527,9 @@ async function handleFormSubmit(form) {
                 if (!state.user || !state.selectedMonthId) return;
                 const monthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
                 const currentCategoryBudgets = state.categories.reduce((sum, cat) => sum + Number(cat.budget), 0);
-                if (currentCategoryBudgets + Number(data.budget) > monthlyBudget.totalBudget) {
-                    throw new Error("Total category budgets cannot exceed the total monthly budget.");
+                const remainingBudget = monthlyBudget.totalBudget - currentCategoryBudgets;
+                if (Number(data.budget) > remainingBudget) {
+                    throw new Error(`Budget exceeds limit. You have ${formatCurrency(remainingBudget)} remaining to allocate.`);
                 }
                 await addDoc(collection(db, `users/${state.user.uid}/categories`), { name: data.name, budget: Number(data.budget), monthlyBudgetId: state.selectedMonthId, owner: state.user.uid, expenses: [] });
                 form.reset();
@@ -480,8 +556,9 @@ async function handleFormSubmit(form) {
                     const categoryId = form.dataset.id;
                     const monthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
                     const otherCategoryBudgets = state.categories.filter(c => c.id !== categoryId).reduce((sum, cat) => sum + Number(cat.budget), 0);
-                    if (otherCategoryBudgets + Number(data.budget) > monthlyBudget.totalBudget) {
-                        throw new Error("Total category budgets cannot exceed the total monthly budget.");
+                    const remainingBudget = monthlyBudget.totalBudget - otherCategoryBudgets;
+                    if (Number(data.budget) > remainingBudget) {
+                        throw new Error(`Budget exceeds limit. You have ${formatCurrency(remainingBudget)} remaining to allocate for this category.`);
                     }
                     await updateDoc(doc(db, `users/${state.user.uid}/categories`, categoryId), { name: data.name, budget: Number(data.budget) });
                     state.editingItem = null;
