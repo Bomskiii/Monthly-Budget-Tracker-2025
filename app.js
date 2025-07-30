@@ -154,7 +154,6 @@ function setupEventListeners() {
 // --- FIREBASE LOGIC ---
 
 function initializeFirebase() {
-    // This function now assumes window.firebaseConfig exists.
     try {
         const app = initializeApp(window.firebaseConfig);
         db = getFirestore(app);
@@ -257,15 +256,15 @@ function setupCategorySnapshot() {
 
 
 // --- Start the app ---
-window.onload = () => {
+function startApp() {
     if (typeof window.firebaseConfig !== 'undefined') {
         initializeFirebase();
         setupEventListeners();
         render();
     } else {
-        // This is a fallback, but the Vercel setup should prevent this.
-        console.error("Firebase configuration is missing!");
-        const appContainer = document.getElementById('app-container');
-        appContainer.innerHTML = `<div class="loader-container"><p class="text-red-500">Error: Application configuration is missing. Deployment may have failed.</p></div>`;
+        console.log("Waiting for Firebase config...");
+        setTimeout(startApp, 100); // Check again in 100ms
     }
-};
+}
+
+startApp();
