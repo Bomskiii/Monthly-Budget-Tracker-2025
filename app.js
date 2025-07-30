@@ -7,7 +7,7 @@ import {
     sendPasswordResetEmail,
     signOut
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, query, where, Timestamp, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, query, where, Timestamp, arrayUnion, arrayRemove, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- GLOBAL STATE & CONFIG ---
@@ -27,21 +27,21 @@ const state = {
     isLoading: true,
     editingItem: null, // { type, id, ... }
     sortConfig: { key: 'name', direction: 'asc' },
-    error: null,
-    notification: null,
     isUploading: false
 };
 
 // --- ICONS ---
 const ICONS = {
-    eye: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
-    eyeSlash: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L6.228 6.228" /></svg>`,
-    edit: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>`,
-    trash: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>`,
-    share: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 100-2.186m0 2.186c-.18.324-.283.696-.283 1.093s.103.77.283 1.093m-7.5-12.96l7.5 4.167" /></svg>`,
-    download: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>`,
-    plus: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>`,
-    receipt: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>`,
+    eye: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/><path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8zm8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/></svg>`,
+    eyeSlash: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="m10.79 12.912-1.614-1.615a3.5 3.5 0 0 1-4.474-4.474l-2.06-2.06C.938 6.278 0 8 0 8s3 5.5 8 5.5a7.029 7.029 0 0 0 2.79-.588zM5.21 3.088A7.028 7.028 0 0 1 8 2.5c5 0 8 5.5 8 5.5s-.939 1.721-2.641 3.238l-2.062-2.062a3.5 3.5 0 0 0-4.474-4.474L5.21 3.089z"/><path d="M5.525 7.646a2.5 2.5 0 0 0 2.829 2.829l-2.83-2.829zm4.95.708-2.829-2.83a2.5 2.5 0 0 1 2.829 2.829zm3.171 6-12-12 .708-.708 12 12-.708.708z"/></svg>`,
+    edit: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/></svg>`,
+    trash: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>`,
+    share: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.5 1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5zm-8.5 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm11 5.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg>`,
+    download: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>`,
+    plus: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/></svg>`,
+    receipt: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M1.5 0A1.5 1.5 0 0 0 0 1.5v13A1.5 1.5 0 0 0 1.5 16h13a1.5 1.5 0 0 0 1.5-1.5v-13A1.5 1.5 0 0 0 14.5 0h-13zM8 13a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H8z"/></svg>`,
+    sortUp: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 12.5a.5.5 0 0 1-1 0V3.707L1.354 4.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L3.5 3.707V12.5zm3.5-9a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1z"/></svg>`,
+    sortDown: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 2.5a.5.5 0 0 0-1 0v8.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 2a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L3.5 11.293V2.5zm3.5 1a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1z"/></svg>`,
 };
 
 // --- HELPER FUNCTIONS ---
@@ -61,7 +61,9 @@ const toInputDate = (dateString) => {
 function render() {
     const appContainer = document.getElementById('app-container');
     if (!appContainer) return;
-    appContainer.innerHTML = ''; // Clear previous content to prevent event listener duplication
+    const scrollPosition = { x: window.scrollX, y: window.scrollY };
+    
+    appContainer.innerHTML = ''; // Clear previous content
 
     let html = '';
     switch (state.currentView) {
@@ -78,6 +80,7 @@ function render() {
             renderChartJS(selectedMonthlyBudget);
         }
     }
+    window.scrollTo(scrollPosition.x, scrollPosition.y);
 }
 
 function renderAuthView() {
@@ -88,7 +91,7 @@ function renderAuthView() {
             <form id="login-form">
                 <div><label for="email">Email</label><input type="email" id="email" name="email" required></div>
                 <div class="password-wrapper"><label for="password">Password</label><input type="password" id="password" name="password" required><button type="button" data-action="toggle-password">${ICONS.eye}</button></div>
-                <button type="submit" class="btn btn-primary w-full">Login</button>
+                <button type="submit" class="btn btn-primary">Login</button>
             </form>
             <div class="links"><a href="#" data-view="forgotPassword" class="btn-link">Forgot Password?</a><p>Don't have an account? <a href="#" data-view="register" class="btn-link">Register</a></p></div>`;
     } else if (state.authView === 'register') {
@@ -98,7 +101,7 @@ function renderAuthView() {
                 <div><label for="email">Email</label><input type="email" id="email" name="email" required></div>
                 <div class="password-wrapper"><label for="password">Password</label><input type="password" id="password" name="password" required><button type="button" data-action="toggle-password">${ICONS.eye}</button></div>
                 <div class="password-wrapper"><label for="confirmPassword">Confirm Password</label><input type="password" id="confirmPassword" name="confirmPassword" required><button type="button" data-action="toggle-password">${ICONS.eye}</button></div>
-                <button type="submit" class="btn btn-primary w-full">Register</button>
+                <button type="submit" class="btn btn-primary">Register</button>
             </form>
             <div class="links"><p>Already have an account? <a href="#" data-view="login" class="btn-link">Login</a></p></div>`;
     } else { // forgotPassword
@@ -106,11 +109,11 @@ function renderAuthView() {
             <h2>Reset Password</h2>
             <form id="forgot-password-form">
                 <div><label for="email">Enter your email</label><input type="email" id="email" name="email" required></div>
-                <button type="submit" class="btn btn-primary w-full">Send Reset Link</button>
+                <button type="submit" class="btn btn-primary">Send Reset Link</button>
             </form>
             <div class="links"><a href="#" data-view="login" class="btn-link">Back to Login</a></div>`;
     }
-    return `<div class="auth-container"><div class="auth-card">${state.error ? `<div class="notification error">${state.error}</div>` : ''}${state.notification ? `<div class="notification success">${state.notification}</div>` : ''}${formHtml}</div></div>`;
+    return `<div class="auth-container"><div class="auth-card">${formHtml}</div></div>`;
 }
 
 function renderAddOrEditBudgetForm() {
@@ -173,9 +176,10 @@ function renderCategorySection(monthlyBudget) {
     const sortedCategories = [...state.categories].sort((a, b) => {
         const key = state.sortConfig.key;
         const dir = state.sortConfig.direction === 'asc' ? 1 : -1;
-        if (a[key] < b[key]) return -1 * dir;
-        if (a[key] > b[key]) return 1 * dir;
-        return 0;
+        if (key === 'name') {
+            return a.name.localeCompare(b.name) * dir;
+        }
+        return (a.budget - b.budget) * dir;
     });
 
     const categoryListHtml = sortedCategories.map(cat => {
@@ -185,44 +189,50 @@ function renderCategorySection(monthlyBudget) {
         }
 
         const totalExpenses = cat.expenses ? cat.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
+        const remaining = cat.budget - totalExpenses;
         return `
             <div class="category-card">
                 <div class="category-card-header">
-                    <div><h4>${cat.name}</h4></div>
+                    <h4>${cat.name}</h4>
                     <div class="actions">
                         ${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="category" data-id="${cat.id}" title="Edit Category">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-category" data-id="${cat.id}" title="Delete Category">${ICONS.trash}</button>` : ''}
                     </div>
                 </div>
-                <div class="category-budget-info">Used ${formatCurrency(totalExpenses)} of ${formatCurrency(cat.budget)}</div>
+                <div class="category-budget-info">
+                    <div>Total Budget<span>${formatCurrency(cat.budget)}</span></div>
+                    <div>Used<span>${formatCurrency(totalExpenses)}</span></div>
+                    <div>Remaining<span class="${remaining < 0 ? 'negative' : 'positive'}">${formatCurrency(remaining)}</span></div>
+                </div>
                 ${renderProgressBar(totalExpenses, cat.budget)}
                 <ul class="expense-list">
                     ${cat.expenses && cat.expenses.map(exp => {
                         const isEditingExp = state.editingItem?.type === 'expense' && state.editingItem.id === exp.id;
                         if (isEditingExp) {
-                            return `<li style="padding: 1rem; background-color: var(--bg-med); border-radius: var(--border-radius); border: 1px solid var(--border-color);"><form class="edit-expense-form" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" required><div class="form-grid"><input type="number" name="amount" value="${exp.amount}" required><input type="date" name="date" value="${toInputDate(exp.date)}" required></div><input type="file" name="receipt">${exp.receiptUrl ? `<div style="margin-top: 0.25rem; font-size: 0.75rem;">Current: <a href="${exp.receiptUrl}" target="_blank" class="btn-link">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="btn btn-sm">Cancel</button></div></form></li>`;
+                            return `<li style="padding: 1rem; background-color: var(--bg-med); border-radius: var(--border-radius); border: 1px solid var(--border-color);"><form class="edit-expense-form" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" placeholder="Description" required><div class="form-grid"><input type="number" name="amount" value="${exp.amount}" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(exp.date)}" min="${toInputDate(monthlyBudget.creationDate)}" required></div><input type="file" name="receipt">${exp.receiptUrl ? `<div style="margin-top: 0.25rem; font-size: 0.75rem;">Current: <a href="${exp.receiptUrl}" target="_blank" class="btn-link">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="btn btn-sm">Cancel</button></div></form></li>`;
                         }
                         return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${cat.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-expense" data-category-id="${cat.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
                     }).join('') || `<li class="text-sm text-gray-400">No expenses added yet.</li>`}
                 </ul>
-                ${state.isEditor ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" required></div><input type="file" name="receipt"><button type="submit" class="btn btn-sm" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add Expense'}</button></form>` : ''}
+                ${state.isEditor ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" min="${toInputDate(monthlyBudget.creationDate)}" required></div><input type="file" name="receipt"><button type="submit" class="btn btn-sm" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add Expense'}</button></form>` : ''}
             </div>`;
     }).join('');
 
     const totalCategoryBudget = state.categories.reduce((sum, cat) => sum + (Number(cat.budget) || 0), 0);
-    const budgetExceeded = totalCategoryBudget > monthlyBudget.totalBudget;
+    if (totalCategoryBudget > monthlyBudget.totalBudget) {
+        showModal('Budget Warning', `The sum of your category budgets (${formatCurrency(totalCategoryBudget)}) exceeds the total monthly budget.`);
+    }
 
     return `
         <div>
             <div class="category-header">
                 <h3 style="font-size: 1.5rem; font-weight: 700; margin:0;">Categories</h3>
                 <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
-                    <label for="sort-key">Sort by:</label>
-                    <select id="sort-key"><option value="name" ${state.sortConfig.key === 'name' ? 'selected' : ''}>Name</option><option value="budget" ${state.sortConfig.key === 'budget' ? 'selected' : ''}>Budget</option></select>
-                    <select id="sort-dir"><option value="asc" ${state.sortConfig.direction === 'asc' ? 'selected' : ''}>Asc</option><option value="desc" ${state.sortConfig.direction === 'desc' ? 'selected' : ''}>Desc</option></select>
+                    <span style="color: var(--text-med);">Sort:</span>
+                    <button class="btn btn-icon" data-action="sort" data-key="name" title="Sort by Name">${state.sortConfig.key === 'name' ? (state.sortConfig.direction === 'asc' ? ICONS.sortUp : ICONS.sortDown) : ICONS.sortUp}</button>
+                    <button class="btn btn-icon" data-action="sort" data-key="budget" title="Sort by Budget">${state.sortConfig.key === 'budget' ? (state.sortConfig.direction === 'asc' ? ICONS.sortUp : ICONS.sortDown) : ICONS.sortUp}</button>
                 </div>
             </div>
             ${state.isEditor ? `<form id="add-category-form" class="card" style="margin-bottom: 1.5rem;"><div class="form-grid"><input type="text" name="name" placeholder="New category name" required><input type="number" name="budget" placeholder="Budget" required></div><button type="submit" class="btn btn-primary" style="margin-top: 1rem;">${ICONS.plus} Add Category</button></form>` : ''}
-            ${budgetExceeded ? `<div class="notification warning">Warning: Sum of category budgets (${formatCurrency(totalCategoryBudget)}) exceeds the total monthly budget.</div>` : ''}
             <div class="category-list">${categoryListHtml || '<p style="color: var(--text-med);">No categories added yet.</p>'}</div>
         </div>`;
 }
@@ -265,7 +275,7 @@ function renderAppView() {
         mainContent = `<div class="text-center p-10 card"><h3 style="font-size: 1.25rem;">No monthly budgets found.</h3>${state.isEditor ? `<p style="color: var(--text-med); margin-top: 0.5rem;">Click "New Budget" to get started.</p>` : ''}</div>`;
     }
 
-    return `<div class="app-main-container">${headerHtml}<main id="app-content">${state.error ? `<div class="notification error">${state.error}</div>` : ''}${mainContent}</main></div>`;
+    return `<div class="app-main-container">${headerHtml}<main id="app-content">${mainContent}</main></div>`;
 }
 
 function renderChartJS(budget) {
@@ -283,7 +293,19 @@ function renderChartJS(budget) {
         data.push(remaining);
     }
 
-    chartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: labels.length > 0 ? labels : ['No Data'], datasets: [{ label: 'Amount', data: data.length > 0 ? data : [1], backgroundColor: ['#58a6ff', '#9333ea', '#db2777', '#d29922', '#3fb950', '#f85149', '#6e7681'], borderColor: '#161b22', borderWidth: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => `${context.label || ''}: ${formatCurrency(context.parsed)}` } } } } });
+    chartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: labels.length > 0 ? labels : ['No Data'], datasets: [{ label: 'Amount', data: data.length > 0 ? data : [1], backgroundColor: ['#58a6ff', '#9333ea', '#db2777', '#d29922', '#3fb950', '#f85149', '#8b949e'], borderColor: '#161b22', borderWidth: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => `${context.label || ''}: ${formatCurrency(context.parsed)}` } } } } });
+}
+
+function showModal(title, message) {
+    const modalHtml = `
+        <div class="modal-overlay visible" id="error-modal" data-action="close-modal">
+            <div class="modal-content">
+                <h3>${title}</h3>
+                <p>${message}</p>
+                <button class="btn btn-primary" data-action="close-modal">OK</button>
+            </div>
+        </div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
 // --- EVENT HANDLERS & LOGIC ---
@@ -296,9 +318,8 @@ function attachEventListeners() {
         if (!target) return;
         
         const action = target.dataset.action;
-        state.error = null; // Clear previous errors on any action
 
-        if (target.matches('a[data-view]')) { e.preventDefault(); state.authView = target.dataset.view; state.notification = null; render(); }
+        if (target.matches('a[data-view]')) { e.preventDefault(); state.authView = target.dataset.view; render(); }
         else if (target.id === 'logout-btn') { handleLogout(); }
         else if (target.id === 'share-btn') { handleShare(); }
         else if (target.id === 'download-csv-btn') { handleDownloadCSV(); }
@@ -309,15 +330,26 @@ function attachEventListeners() {
         else if (action === 'edit-item') { state.editingItem = { type: target.dataset.type, id: target.dataset.id, categoryId: target.dataset.categoryId }; render(); }
         else if (action === 'add-budget') { state.editingItem = { type: 'budget', id: null }; render(); }
         else if (action === 'cancel-edit') { state.editingItem = null; render(); }
+        else if (action === 'sort') {
+            const key = target.dataset.key;
+            if (state.sortConfig.key === key) {
+                state.sortConfig.direction = state.sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                state.sortConfig.key = key;
+                state.sortConfig.direction = 'asc';
+            }
+            render();
+        }
     };
+    document.body.onclick = function(e) {
+        if (e.target.closest('[data-action="close-modal"]')) {
+            const modal = document.getElementById('error-modal');
+            if (modal) modal.remove();
+        }
+    }
     appContainer.onsubmit = function(e) { e.preventDefault(); handleFormSubmit(e.target); };
     appContainer.onchange = function(e) {
         if (e.target.id === 'month-select') { state.selectedMonthId = e.target.value; setupCategorySnapshot(); }
-        if (e.target.id === 'sort-key' || e.target.id === 'sort-dir') {
-            state.sortConfig.key = document.getElementById('sort-key').value;
-            state.sortConfig.direction = document.getElementById('sort-dir').value;
-            render();
-        }
     };
 }
 
@@ -354,15 +386,12 @@ async function handleFileUpload(file) {
 async function handleDeleteBudget(budgetId) {
     if (confirm('Are you sure you want to delete this entire budget, including all its categories and expenses? This action cannot be undone.')) {
         try {
-            // In a real app, you'd want to delete all sub-collections and storage files. 
-            // This is simplified for this example. A cloud function is better for this.
             await deleteDoc(doc(db, `users/${state.user.uid}/monthlyBudgets`, budgetId));
             state.editingItem = null;
-            state.selectedMonthId = ''; // Reset selection
-            // The onSnapshot will automatically re-render the list.
+            // The onSnapshot listener will automatically trigger a re-render.
+            // We just need to ensure a valid budget is selected.
         } catch (err) {
-            state.error = "Failed to delete budget.";
-            render();
+            showModal("Error", "Failed to delete budget.");
         }
     }
 }
@@ -393,14 +422,13 @@ async function handleFormSubmit(form) {
     if (!isFirebaseInitialized || state.isUploading) return;
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
-    state.error = null;
-    state.notification = null;
+    let error = null;
 
     try {
         switch (form.id) {
             case 'login-form': await signInWithEmailAndPassword(auth, data.email, data.password); break;
             case 'register-form': if (data.password !== data.confirmPassword) throw new Error("Passwords do not match."); await createUserWithEmailAndPassword(auth, data.email, data.password); break;
-            case 'forgot-password-form': await sendPasswordResetEmail(auth, data.email); state.notification = 'Password reset email sent!'; render(); break;
+            case 'forgot-password-form': await sendPasswordResetEmail(auth, data.email); alert('Password reset email sent!'); break;
             case 'add-budget-form': {
                 if (!state.user) throw new Error("You must be logged in.");
                 const file = formData.get('approvalDoc');
@@ -437,6 +465,9 @@ async function handleFormSubmit(form) {
                     const categoryId = form.dataset.categoryId;
                     if (!state.user || !categoryId) return;
                     const monthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
+                    if (new Date(data.date) < monthlyBudget.creationDate.toDate()) {
+                        throw new Error("Expense date cannot be before the budget's creation date.");
+                    }
                     const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
                     if (totalSpent + Number(data.amount) > monthlyBudget.totalBudget) {
                         throw new Error("This expense exceeds the total monthly budget.");
@@ -458,6 +489,9 @@ async function handleFormSubmit(form) {
                 } else if (form.classList.contains('edit-expense-form')) {
                     const { categoryId, expenseId } = form.dataset;
                     const monthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
+                    if (new Date(data.date) < monthlyBudget.creationDate.toDate()) {
+                        throw new Error("Expense date cannot be before the budget's creation date.");
+                    }
                     const currentExpense = state.categories.find(c => c.id === categoryId)?.expenses.find(e => e.id === expenseId);
                     const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
                     const newTotalSpent = totalSpent - (currentExpense?.amount || 0) + Number(data.amount);
@@ -479,16 +513,13 @@ async function handleFormSubmit(form) {
                     state.editingItem = null;
                 }
         }
-    } catch (err) { state.error = err.message; }
+    } catch (err) { error = err.message; }
     finally {
         state.isUploading = false;
-        if (!state.error) {
-            render(); 
+        if (error) {
+            showModal('Error', error);
         } else {
-            // If there's an error, we want to show it but not clear the editing state
-            const currentEditingItem = state.editingItem;
-            render();
-            state.editingItem = currentEditingItem;
+            render(); 
         }
     }
 }
@@ -559,7 +590,7 @@ function initializeFirebase() {
                 }
             }
         });
-    } catch (e) { console.error("Firebase initialization error:", e); state.error = "Failed to initialize the application."; state.currentView = 'auth'; render(); }
+    } catch (e) { console.error("Firebase initialization error:", e); showModal("Initialization Error", "Failed to initialize the application."); }
 }
 
 let monthlyUnsubscribe = null;
@@ -577,15 +608,27 @@ function setupSnapshots() {
     if (!db || !userIdToFetch) { state.isLoading = false; render(); return; }
     cleanupListeners();
     state.isLoading = true;
-    const monthlyCollectionPath = `users/${userIdToFetch}/monthlyBudgets`;
-    monthlyUnsubscribe = onSnapshot(query(collection(db, monthlyCollectionPath)), (snapshot) => {
+    
+    const budgetsQuery = query(collection(db, `users/${userIdToFetch}/monthlyBudgets`), orderBy("creationDate", "desc"));
+
+    monthlyUnsubscribe = onSnapshot(budgetsQuery, (snapshot) => {
+        const previousBudgetCount = state.monthlyBudgets.length;
         state.monthlyBudgets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
         const selectedExists = state.monthlyBudgets.some(b => b.id === state.selectedMonthId);
-        if (!state.selectedMonthId || !selectedExists) {
+        
+        // If the selected budget was deleted, or none was ever selected
+        if (!selectedExists || !state.selectedMonthId) {
             state.selectedMonthId = state.monthlyBudgets.length > 0 ? state.monthlyBudgets[0].id : '';
         }
+        
         state.isLoading = false;
-        setupCategorySnapshot();
+        // Only call setupCategory if the selection changed or it's the initial load
+        if (previousBudgetCount !== state.monthlyBudgets.length || !categoryUnsubscribe) {
+            setupCategorySnapshot();
+        } else {
+            render();
+        }
     }, err => { console.error("Error fetching monthly budgets:", err); state.isLoading = false; render(); });
 }
 
@@ -611,7 +654,7 @@ function startApp() {
         } else if (++attempts > maxAttempts) {
             clearInterval(interval);
             console.error("Firebase config failed to load.");
-            document.getElementById('app-container').innerHTML = `<div class="loader-container"><p class="text-red-500 text-lg font-semibold">Error: App config failed to load.</p><p class="text-gray-300 mt-2">Please try a hard refresh (Ctrl+Shift+R).</p></div>`;
+            showModal("Configuration Error", "Application configuration failed to load. Please try a hard refresh (Ctrl+Shift+R).");
         }
     }, 100);
 }
