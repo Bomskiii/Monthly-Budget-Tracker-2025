@@ -124,9 +124,45 @@ input[type="date"] { color-scheme: dark; }
 .password-wrapper input { padding-right: 2.5rem; }
 .password-wrapper button { position: absolute; top: 50%; right: 0; transform: translateY(-50%); background: transparent; border: none; color: var(--text-med); height: 100%; padding: 0 0.75rem; cursor: pointer; display: inline-flex; align-items: center; }
 
-input[type="file"] { font-size: 0.875rem; color: var(--text-med); background: none; padding-left: 0; }
-input[type="file"]::file-selector-button { margin-right: 1rem; padding: 0.5rem 1rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); font-weight: 500; background-color: var(--bg-light); color: var(--text-light); cursor: pointer; transition: background-color 0.2s; }
-input[type="file"]::file-selector-button:hover { background-color: #30363d; }
+.custom-file-input {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+.custom-file-input input[type="file"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+.file-input-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    background-color: var(--bg-dark);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+}
+.file-input-text {
+    color: var(--text-med);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.file-input-button {
+    padding: 0.25rem 0.75rem;
+    background-color: var(--bg-light);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    color: var(--text-light);
+    font-size: 0.875rem;
+    margin-left: 1rem;
+}
 
 /* --- Progress Bar --- */
 .progress-bar-container { width: 100%; background-color: var(--bg-dark); border-radius: 999px; height: 0.5rem; overflow: hidden; }
@@ -136,6 +172,7 @@ input[type="file"]::file-selector-button:hover { background-color: #30363d; }
 
 /* --- Specific Components --- */
 .stats-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1rem; }
+@media (min-width: 640px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
 .stat-card { background-color: transparent; padding: 0; }
 .stat-card .label { font-size: 0.875rem; color: var(--text-med); margin-bottom: 0.25rem; }
 .stat-card .value { font-size: clamp(1.25rem, 3vw, 1.75rem); font-weight: 600; }
