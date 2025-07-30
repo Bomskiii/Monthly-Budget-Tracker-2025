@@ -94,23 +94,6 @@ input:focus, select:focus {
     position: relative;
 }
 
-.absolute {
-    position: absolute;
-}
-
-.inset-y-0 {
-    top: 0;
-    bottom: 0;
-}
-
-.right-0 {
-    right: 0;
-}
-
-.pr-10 {
-    padding-right: 2.5rem;
-}
-
 /* --- Buttons --- */
 button {
     padding: 0.75rem 1.5rem;
@@ -156,6 +139,25 @@ button:disabled {
 }
 .btn-share:hover {
     background-color: #7e22ce; /* hover:bg-purple-700 */
+}
+
+/* FIX: Specific styles for the password peek button */
+.relative input[type="password"], .relative input[type="text"] {
+    padding-right: 3rem; /* Make space for the button */
+}
+
+button[data-action="toggle-password"] {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    padding: 0 0.75rem;
+    height: 100%;
+    background-color: transparent;
+    border: none;
+    color: #9ca3af;
+    font-size: 1.25rem;
+    cursor: pointer;
 }
 
 /* --- Loader --- */
