@@ -146,15 +146,27 @@ function renderAppView() {
 
     if (state.isLoading) {
         mainContent = `<div class="loader-container"><div class="loader"></div><p class="loader-text">Loading Data...</p></div>`;
-    } else if (state.monthlyBudgets.length > 0) {
-        // Full app content will be built here
     } else {
-        mainContent = `
-            <div class="text-center p-10 bg-gray-800 rounded-lg">
-                <h3 class="text-xl text-white">No monthly budgets created yet.</h3>
-                ${state.isEditor ? '<p class="text-gray-400">Use the form above to create your first one.</p>' : ''}
-            </div>
-        `;
+        // This part was missing the full structure
+        const selectedMonthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
+        
+        mainContent += `<div class="mb-8">
+                            <label for="month-select" class="block text-lg font-medium text-gray-300 mb-2">Select Budget Month:</label>
+                            <select id="month-select" class="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                ${state.monthlyBudgets.map(b => `<option value="${b.id}" ${b.id === state.selectedMonthId ? 'selected' : ''}>${b.title} (${b.code}) - Created: ${formatDate(b.createdAt)}</option>`).join('')}
+                            </select>
+                        </div>`;
+
+        if (selectedMonthlyBudget) {
+            // Render overview, charts, etc.
+        } else {
+            mainContent += `
+                <div class="text-center p-10 bg-gray-800 rounded-lg">
+                    <h3 class="text-xl text-white">No monthly budgets created yet.</h3>
+                    ${state.isEditor ? '<p class="text-gray-400">Use the form above to create your first one.</p>' : ''}
+                </div>
+            `;
+        }
     }
 
     return `<div class="app-main-container">
