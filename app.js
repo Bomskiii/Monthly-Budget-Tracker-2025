@@ -135,8 +135,16 @@ function renderAddOrEditBudgetForm() {
             <div><label for="nomer-pengajuan">Nomer Pengajuan</label><input type="text" id="nomer-pengajuan" name="nomerPengajuan" value="${budget?.nomerPengajuan || ''}" placeholder="e.g., NP-001" required></div>
             <div><label for="creation-date">Creation Date</label><input type="date" id="creation-date" name="creationDate" value="${toInputDate(budget?.creationDate)}" required></div>
             <div><label for="total-budget">Total Budget Amount</label><input type="number" id="total-budget" name="totalBudget" value="${budget?.totalBudget || ''}" placeholder="e.g., 5000000" required></div>
-            <div class="col-span-2"><label for="approval-doc">Proof of Approval (PDF/Image)</label><input type="file" id="approval-doc" name="approvalDoc">
-             ${budget?.approvalDocUrl ? `<div style="margin-top: 0.5rem; font-size: 0.75rem;">Current: <a href="${budget.approvalDocUrl}" target="_blank" class="btn-link">${budget.approvalDocName || 'View File'}</a></div>` : ''}
+            <div class="col-span-2">
+                <label for="approval-doc">Proof of Approval (PDF, JPG, PNG - Max 5MB)</label>
+                <div class="custom-file-input">
+                    <input type="file" id="approval-doc" name="approvalDoc" accept=".pdf,.jpg,.jpeg,.png">
+                    <label for="approval-doc" class="file-input-label">
+                        <span class="file-input-text">Upload proof of receipt here...</span>
+                        <span class="file-input-button">Choose File</span>
+                    </label>
+                </div>
+                ${budget?.approvalDocUrl ? `<div style="margin-top: 0.5rem; font-size: 0.75rem;">Current: <a href="${budget.approvalDocUrl}" target="_blank" class="btn-link">${budget.approvalDocName || 'View File'}</a></div>` : ''}
             </div>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-top: 1rem;">
@@ -187,6 +195,11 @@ function renderCategorySection(monthlyBudget) {
         if (key === 'name') {
             return a.name.localeCompare(b.name) * dir;
         }
+        if (key === 'used') {
+             const usedA = a.expenses ? a.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
+             const usedB = b.expenses ? b.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
+             return (usedA - usedB) * dir;
+        }
         return (a.budget - b.budget) * dir;
     });
 
@@ -226,7 +239,7 @@ function renderCategorySection(monthlyBudget) {
                             return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${cat.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-expense" data-category-id="${cat.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
                         }).join('') || `<li class="text-sm text-gray-400">No expenses added yet.</li>`}
                     </ul>
-                    ${state.isEditor ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" min="${toInputDate(monthlyBudget.creationDate)}" required></div><input type="file" name="receipt"><button type="submit" class="btn btn-sm" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add Expense'}</button></form>` : ''}
+                    ${state.isEditor ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" min="${toInputDate(monthlyBudget.creationDate)}" required></div><div class="custom-file-input"><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><label class="file-input-label"><span class="file-input-text">Upload receipt...</span><span class="file-input-button">Choose File</span></label></div><button type="submit" class="btn btn-sm" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add Expense'}</button></form>` : ''}
                 </div>
             </div>`;
     }).join('');
@@ -236,9 +249,10 @@ function renderCategorySection(monthlyBudget) {
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <h3 style="font-size: 1.5rem; font-weight: 700; margin:0;">Categories</h3>
                 <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
-                    <span style="color: var(--text-med);">Sort:</span>
+                    <span style="color: var(--text-med);">Sort by:</span>
                     <button class="btn btn-icon" data-action="sort" data-key="name" title="Sort by Name">${state.sortConfig.key === 'name' ? (state.sortConfig.direction === 'asc' ? ICONS.sortUp : ICONS.sortDown) : ICONS.sortUp}</button>
                     <button class="btn btn-icon" data-action="sort" data-key="budget" title="Sort by Budget">${state.sortConfig.key === 'budget' ? (state.sortConfig.direction === 'asc' ? ICONS.sortUp : ICONS.sortDown) : ICONS.sortUp}</button>
+                    <button class="btn btn-icon" data-action="sort" data-key="used" title="Sort by Used Amount">${state.sortConfig.key === 'used' ? (state.sortConfig.direction === 'asc' ? ICONS.sortUp : ICONS.sortDown) : ICONS.sortUp}</button>
                 </div>
             </div>
             ${state.isEditor ? `<form id="add-category-form" class="card" style="margin-bottom: 1.5rem;"><div class="form-grid"><input type="text" name="name" placeholder="New category name" required><input type="number" name="budget" placeholder="Budget" required></div><button type="submit" class="btn btn-primary" style="margin-top: 1rem;">${ICONS.plus} Add Category</button></form>` : ''}
@@ -253,7 +267,7 @@ function renderCategoryDetailView(category, monthlyBudget) {
 
     return `
         <div style="margin-bottom: 1.5rem;">
-            <button class="btn" data-action="back-to-all-categories">${ICONS.back || '&larr;'} Back to All Categories</button>
+            <button class="btn" data-action="back-to-all-categories">&larr; Back to All Categories</button>
         </div>
         <div class="dashboard-grid">
             <div class="card">
@@ -274,7 +288,6 @@ function renderCategoryDetailView(category, monthlyBudget) {
             <h3 style="font-size: 1.5rem; font-weight: 700; margin:0 0 1.5rem 0;">Expenses</h3>
             <ul class="expense-list">
                 ${category.expenses && category.expenses.length > 0 ? category.expenses.map(exp => {
-                    // This part is duplicated, can be refactored later
                      return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${category.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-expense" data-category-id="${category.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
                 }).join('') : `<li class="text-sm text-gray-400">No expenses added yet.</li>`}
             </ul>
@@ -425,6 +438,15 @@ function attachEventListeners() {
     appContainer.onsubmit = function(e) { e.preventDefault(); handleFormSubmit(e.target); };
     appContainer.onchange = function(e) {
         if (e.target.id === 'month-select') { state.selectedMonthId = e.target.value; state.selectedCategoryId = null; setupCategorySnapshot(); }
+        if (e.target.matches('input[type="file"]')) {
+            const file = e.target.files[0];
+            const label = e.target.closest('.custom-file-input').querySelector('.file-input-text');
+            if (file && label) {
+                label.textContent = file.name;
+            } else if (label) {
+                label.textContent = 'Upload proof of receipt here...';
+            }
+        }
     };
 }
 
@@ -449,6 +471,10 @@ function togglePasswordVisibility(button) {
 
 async function handleFileUpload(file) {
     if (!file || file.size === 0) return null;
+    if (file.size > 5 * 1024 * 1024) throw new Error("File size cannot exceed 5MB.");
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (!validTypes.includes(file.type)) throw new Error("Invalid file type. Please upload PDF, JPG, or PNG.");
+
     state.isUploading = true;
     render();
     const storageRef = ref(storage, `uploads/${state.user.uid}/${Date.now()}-${file.name}`);
