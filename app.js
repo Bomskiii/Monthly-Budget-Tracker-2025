@@ -53,7 +53,7 @@ const formatCurrency = (value) => `Rp ${new Intl.NumberFormat('id-ID').format(Ma
 const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = dateString.toDate ? dateString.toDate() : new Date(dateString);
-    return date.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return date.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
 };
 const toInputDate = (dateString) => {
     if (!dateString) return new Date().toISOString().split('T')[0];
