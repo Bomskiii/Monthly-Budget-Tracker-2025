@@ -29,7 +29,8 @@ const state = {
     isLoading: true,
     editingItem: null, // { type, id, ... }
     sortConfig: { key: 'name', direction: 'asc' },
-    isUploading: false
+    isUploading: false,
+    showAddExpenseFormFor: null // ID of category to show form for
 };
 
 const CHART_COLORS = ['#58a6ff', '#9333ea', '#db2777', '#d29922', '#3fb950', '#f85149', '#8b949e'];
@@ -238,7 +239,7 @@ function renderCategorySection(monthlyBudget) {
                             return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${cat.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-expense" data-category-id="${cat.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
                         }).join('') || `<li class="text-sm text-gray-400">No expenses added yet.</li>`}
                     </ul>
-                    ${state.isEditor ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" min="${toInputDate(monthlyBudget.approvalDate)}" required></div><div class="custom-file-input"><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><label class="file-input-label"><span class="file-input-text">Upload receipt...</span><span class="file-input-button">Choose File</span></label></div><button type="submit" class="btn btn-sm" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add Expense'}</button></form>` : ''}
+                    ${state.isEditor ? (state.showAddExpenseFormFor === cat.id ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" min="${toInputDate(monthlyBudget.approvalDate)}" required></div><div class="custom-file-input"><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><label class="file-input-label"><span class="file-input-text">Upload receipt...</span><span class="file-input-button">Choose File</span></label></div><div style="display:flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-sm btn-primary" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add'}</button><button type="button" class="btn btn-sm" data-action="toggle-add-expense" data-id="">Cancel</button></div></form>` : `<button class="btn btn-sm" data-action="toggle-add-expense" data-id="${cat.id}">${ICONS.plus} Add Expense</button>`) : ''}
                 </div>
             </div>`;
     }).join('');
@@ -417,6 +418,7 @@ function attachEventListeners() {
         else if (action === 'add-budget') { state.editingItem = { type: 'budget', id: null }; render(); }
         else if (action === 'cancel-edit') { state.editingItem = null; render(); }
         else if (action === 'back-to-all-categories') { state.selectedCategoryId = null; render(); }
+        else if (action === 'toggle-add-expense') { state.showAddExpenseFormFor = target.dataset.id; render(); }
         else if (action === 'sort') {
             const key = target.dataset.key;
             if (state.sortConfig.key === key) {
@@ -576,7 +578,7 @@ async function handleFormSubmit(form) {
                     const uploadResult = await handleFileUpload(file);
                     const newExpense = { id: Math.random().toString(36).substring(2), description: data.description, amount: Number(data.amount), date: Timestamp.fromDate(new Date(data.date)), receiptUrl: uploadResult?.url || null, receiptName: uploadResult?.name || null };
                     await updateDoc(doc(db, `users/${state.user.uid}/categories`, categoryId), { expenses: arrayUnion(newExpense) });
-                    form.reset();
+                    state.showAddExpenseFormFor = null;
                 } else if (form.classList.contains('edit-category-form')) {
                     const categoryId = form.dataset.id;
                     const monthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
