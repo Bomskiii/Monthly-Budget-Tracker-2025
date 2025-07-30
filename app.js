@@ -32,6 +32,18 @@ const state = {
     isUploading: false
 };
 
+// --- ICONS ---
+const ICONS = {
+    eye: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
+    eyeSlash: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L6.228 6.228" /></svg>`,
+    edit: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>`,
+    trash: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>`,
+    share: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 100-2.186m0 2.186c-.18.324-.283.696-.283 1.093s.103.77.283 1.093m-7.5-12.96l7.5 4.167" /></svg>`,
+    download: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>`,
+    plus: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>`,
+    receipt: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>`,
+};
+
 // --- HELPER FUNCTIONS ---
 const formatCurrency = (value) => `Rp ${new Intl.NumberFormat('id-ID').format(Math.round(value))}`;
 const formatDate = (dateString) => {
@@ -73,53 +85,53 @@ function renderAuthView() {
     let formHtml = '';
     if (state.authView === 'login') {
         formHtml = `
-            <h2 class="text-3xl font-bold text-center text-white mb-6">Login</h2>
-            <form id="login-form" class="space-y-4">
-                <input type="email" name="email" placeholder="Email" class="w-full p-3 bg-gray-700 rounded-md text-white" required>
-                <div class="relative"><input type="password" name="password" placeholder="Password" class="w-full p-3 bg-gray-700 rounded-md text-white pr-10" required><button type="button" class="absolute inset-y-0 right-0 px-3 text-gray-400" data-action="toggle-password">👁️</button></div>
-                <button type="submit" class="w-full p-3 bg-indigo-600 rounded-md font-semibold hover:bg-indigo-700">Login</button>
+            <h2>Login</h2>
+            <form id="login-form">
+                <div><label for="email">Email</label><input type="email" id="email" name="email" required></div>
+                <div class="password-wrapper"><label for="password">Password</label><input type="password" id="password" name="password" required><button type="button" data-action="toggle-password">${ICONS.eye}</button></div>
+                <button type="submit" class="btn btn-primary w-full">Login</button>
             </form>
-            <div class="text-center mt-4"><a href="#" data-view="forgotPassword" class="text-sm text-indigo-400 hover:underline">Forgot Password?</a><p class="text-gray-400 mt-2">Don't have an account? <a href="#" data-view="register" class="text-indigo-400 hover:underline">Register</a></p></div>`;
+            <div class="links"><a href="#" data-view="forgotPassword" class="btn-link">Forgot Password?</a><p>Don't have an account? <a href="#" data-view="register" class="btn-link">Register</a></p></div>`;
     } else if (state.authView === 'register') {
          formHtml = `
-            <h2 class="text-3xl font-bold text-center text-white mb-6">Register</h2>
-            <form id="register-form" class="space-y-4">
-                <input type="email" name="email" placeholder="Email" class="w-full p-3 bg-gray-700 rounded-md text-white" required>
-                <div class="relative"><input type="password" name="password" placeholder="Password (min. 6 characters)" class="w-full p-3 bg-gray-700 rounded-md text-white pr-10" required><button type="button" class="absolute inset-y-0 right-0 px-3 text-gray-400" data-action="toggle-password">👁️</button></div>
-                <div class="relative"><input type="password" name="confirmPassword" placeholder="Confirm Password" class="w-full p-3 bg-gray-700 rounded-md text-white pr-10" required><button type="button" class="absolute inset-y-0 right-0 px-3 text-gray-400" data-action="toggle-password">👁️</button></div>
-                <button type="submit" class="w-full p-3 bg-indigo-600 rounded-md font-semibold hover:bg-indigo-700">Register</button>
+            <h2>Register</h2>
+            <form id="register-form">
+                <div><label for="email">Email</label><input type="email" id="email" name="email" required></div>
+                <div class="password-wrapper"><label for="password">Password</label><input type="password" id="password" name="password" required><button type="button" data-action="toggle-password">${ICONS.eye}</button></div>
+                <div class="password-wrapper"><label for="confirmPassword">Confirm Password</label><input type="password" id="confirmPassword" name="confirmPassword" required><button type="button" data-action="toggle-password">${ICONS.eye}</button></div>
+                <button type="submit" class="btn btn-primary w-full">Register</button>
             </form>
-            <p class="text-center text-gray-400 mt-4">Already have an account? <a href="#" data-view="login" class="text-indigo-400 hover:underline">Login</a></p>`;
+            <div class="links"><p>Already have an account? <a href="#" data-view="login" class="btn-link">Login</a></p></div>`;
     } else { // forgotPassword
          formHtml = `
-            <h2 class="text-3xl font-bold text-center text-white mb-6">Reset Password</h2>
-            <form id="forgot-password-form" class="space-y-4">
-                <input type="email" name="email" placeholder="Enter your email" class="w-full p-3 bg-gray-700 rounded-md text-white" required>
-                <button type="submit" class="w-full p-3 bg-indigo-600 rounded-md font-semibold hover:bg-indigo-700">Send Reset Link</button>
+            <h2>Reset Password</h2>
+            <form id="forgot-password-form">
+                <div><label for="email">Enter your email</label><input type="email" id="email" name="email" required></div>
+                <button type="submit" class="btn btn-primary w-full">Send Reset Link</button>
             </form>
-            <p class="text-center text-gray-400 mt-4"><a href="#" data-view="login" class="text-indigo-400 hover:underline">Back to Login</a></p>`;
+            <div class="links"><a href="#" data-view="login" class="btn-link">Back to Login</a></div>`;
     }
-    return `<div class="min-h-screen flex items-center justify-center"><div class="max-w-md w-full bg-gray-800 p-8 rounded-lg shadow-lg">${state.error ? `<div class="bg-red-500 p-3 rounded-md mb-4">${state.error}</div>` : ''}${state.notification ? `<div class="bg-green-500 p-3 rounded-md mb-4">${state.notification}</div>` : ''}${formHtml}</div></div>`;
+    return `<div class="auth-container"><div class="auth-card">${state.error ? `<div class="notification error">${state.error}</div>` : ''}${state.notification ? `<div class="notification success">${state.notification}</div>` : ''}${formHtml}</div></div>`;
 }
 
 function renderAddOrEditBudgetForm() {
     const isEditing = state.editingItem?.type === 'budget';
     const budget = isEditing ? state.monthlyBudgets.find(b => b.id === state.editingItem.id) : null;
     
-    return `<form id="${isEditing ? 'edit-budget-form' : 'add-budget-form'}" class="mb-8 p-6 bg-gray-800 rounded-lg shadow-md">
+    return `<form id="${isEditing ? 'edit-budget-form' : 'add-budget-form'}" class="card">
         <h2 class="text-2xl font-bold text-white mb-4">${isEditing ? 'Edit Monthly Budget' : 'Create New Monthly Budget'}</h2>
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div><label for="budget-title" class="block text-sm font-medium text-gray-300 mb-1">Budget Title</label><input type="text" id="budget-title" name="title" value="${budget?.title || ''}" placeholder="e.g., Q3 Marketing" class="w-full p-2 bg-gray-700 rounded-md text-white" required></div>
-            <div><label for="nomer-pengajuan" class="block text-sm font-medium text-gray-300 mb-1">Nomer Pengajuan</label><input type="text" id="nomer-pengajuan" name="nomerPengajuan" value="${budget?.nomerPengajuan || ''}" placeholder="e.g., NP-001" class="w-full p-2 bg-gray-700 rounded-md text-white" required></div>
-            <div><label for="creation-date" class="block text-sm font-medium text-gray-300 mb-1">Creation Date</label><input type="date" id="creation-date" name="creationDate" value="${toInputDate(budget?.creationDate)}" class="w-full p-2 bg-gray-700 rounded-md text-white" required></div>
-            <div><label for="total-budget" class="block text-sm font-medium text-gray-300 mb-1">Total Budget Amount</label><input type="number" id="total-budget" name="totalBudget" value="${budget?.totalBudget || ''}" placeholder="e.g., 5000000" class="w-full p-2 bg-gray-700 rounded-md text-white" required></div>
-            <div class="md:col-span-2"><label for="approval-doc" class="block text-sm font-medium text-gray-300 mb-1">Proof of Approval (PDF/Image)</label><input type="file" id="approval-doc" name="approvalDoc" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-500 file:text-white hover:file:bg-indigo-600">
-             ${budget?.approvalDocUrl ? `<div class="mt-2 text-xs">Current: <a href="${budget.approvalDocUrl}" target="_blank" class="text-indigo-400 hover:underline">${budget.approvalDocName || 'View File'}</a></div>` : ''}
+        <div class="form-grid grid-cols-3">
+            <div><label for="budget-title">Budget Title</label><input type="text" id="budget-title" name="title" value="${budget?.title || ''}" placeholder="e.g., Q3 Marketing" required></div>
+            <div><label for="nomer-pengajuan">Nomer Pengajuan</label><input type="text" id="nomer-pengajuan" name="nomerPengajuan" value="${budget?.nomerPengajuan || ''}" placeholder="e.g., NP-001" required></div>
+            <div><label for="creation-date">Creation Date</label><input type="date" id="creation-date" name="creationDate" value="${toInputDate(budget?.creationDate)}" required></div>
+            <div class="grid-col-span-2"><label for="total-budget">Total Budget Amount</label><input type="number" id="total-budget" name="totalBudget" value="${budget?.totalBudget || ''}" placeholder="e.g., 5000000" required></div>
+            <div class="grid-col-span-3"><label for="approval-doc">Proof of Approval (PDF/Image)</label><input type="file" id="approval-doc" name="approvalDoc">
+             ${budget?.approvalDocUrl ? `<div class="mt-2 text-xs">Current: <a href="${budget.approvalDocUrl}" target="_blank" class="btn-link">${budget.approvalDocName || 'View File'}</a></div>` : ''}
             </div>
         </div>
         <div class="flex gap-2 mt-4">
-            <button type="submit" class="w-full p-3 bg-indigo-600 rounded-md font-semibold hover:bg-indigo-700" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? 'Uploading...' : (isEditing ? 'Save Changes' : 'Create Budget')}</button>
-            ${isEditing ? `<button type="button" data-action="cancel-edit" class="w-full p-3 bg-gray-600 rounded-md font-semibold hover:bg-gray-700">Cancel</button>` : ''}
+            <button type="submit" class="btn btn-primary" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? 'Uploading...' : (isEditing ? 'Save Changes' : 'Create Budget')}</button>
+            ${isEditing ? `<button type="button" data-action="cancel-edit" class="btn btn-subtle">Cancel</button>` : ''}
         </div>
     </form>`;
 }
@@ -127,17 +139,17 @@ function renderAddOrEditBudgetForm() {
 function renderBudgetOverview(budget, spent) {
     const remaining = budget.totalBudget - spent;
     return `
-        <div class="flex justify-between items-center mb-2">
+        <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
             <div>
                 <h3 class="text-2xl font-bold">${budget.title} <span class="text-lg font-normal text-gray-400">(${budget.nomerPengajuan})</span></h3>
-                <p class="text-sm text-gray-400">Created: ${formatDate(budget.creationDate)} ${budget.approvalDocUrl ? `| <a href="${budget.approvalDocUrl}" target="_blank" class="text-indigo-400 hover:underline">View Approval</a>` : ''}</p>
+                <p class="text-sm text-gray-400">Created: ${formatDate(budget.creationDate)} ${budget.approvalDocUrl ? `| <a href="${budget.approvalDocUrl}" target="_blank" class="btn-link">View Approval</a>` : ''}</p>
             </div>
-            ${state.isEditor ? `<button class="text-indigo-400 hover:underline" data-action="edit-item" data-type="budget" data-id="${budget.id}">Edit Budget ✏️</button>` : ''}
+            ${state.isEditor ? `<button class="btn btn-subtle btn-sm" data-action="edit-item" data-type="budget" data-id="${budget.id}">${ICONS.edit} Edit Budget</button>` : ''}
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div class="bg-gray-800 p-4 rounded-lg text-center"><p class="text-sm text-gray-400">Total Budget</p><p class="text-2xl font-bold text-green-400">${formatCurrency(budget.totalBudget)}</p></div>
-            <div class="bg-gray-800 p-4 rounded-lg text-center"><p class="text-sm text-gray-400">Spent</p><p class="text-2xl font-bold text-yellow-400">${formatCurrency(spent)}</p></div>
-            <div class="bg-gray-800 p-4 rounded-lg text-center"><p class="text-sm text-gray-400">Remaining</p><p class="text-2xl font-bold ${remaining < 0 ? 'text-red-500' : 'text-blue-400'}">${formatCurrency(remaining)}</p></div>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="label">Total Budget</div><div class="value positive">${formatCurrency(budget.totalBudget)}</div></div>
+            <div class="stat-card"><div class="label">Spent</div><div class="value neutral">${formatCurrency(spent)}</div></div>
+            <div class="stat-card"><div class="label">Remaining</div><div class="value ${remaining < 0 ? 'negative' : 'positive'}">${formatCurrency(remaining)}</div></div>
         </div>`;
 }
 
@@ -153,57 +165,61 @@ function renderCategorySection(monthlyBudget) {
     const categoryListHtml = sortedCategories.map(cat => {
         const isEditingCat = state.editingItem?.type === 'category' && state.editingItem.id === cat.id;
         if (isEditingCat) {
-            return `<form class="edit-category-form bg-gray-800 p-4 rounded-lg" data-id="${cat.id}"><h4 class="text-lg font-bold mb-2">Edit Category</h4><input type="text" name="name" value="${cat.name}" class="w-full p-2 bg-gray-700 rounded-md text-white mb-2" required><input type="number" name="budget" value="${cat.budget || ''}" placeholder="Category Budget" class="w-full p-2 bg-gray-700 rounded-md text-white mb-2" required><div class="flex gap-2"><button type="submit" class="w-full p-2 bg-indigo-500 text-sm rounded-md hover:bg-indigo-600">Save</button><button type="button" data-action="cancel-edit" class="w-full p-2 bg-gray-600 text-sm rounded-md hover:bg-gray-700">Cancel</button></div></form>`;
+            return `<form class="edit-category-form card" data-id="${cat.id}"><h4 class="text-lg font-bold mb-2">Edit Category</h4><input type="text" name="name" value="${cat.name}" required><input type="number" name="budget" value="${cat.budget || ''}" placeholder="Category Budget" required><div class="flex gap-2"><button type="submit" class="btn btn-primary btn-sm">Save</button><button type="button" data-action="cancel-edit" class="btn btn-subtle btn-sm">Cancel</button></div></form>`;
         }
 
         const totalExpenses = cat.expenses ? cat.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
         return `
-            <div class="bg-gray-800 p-4 rounded-lg">
-                <div class="flex justify-between items-start mb-3">
-                    <div>
-                        <h4 class="text-lg font-bold">${cat.name} ${state.isEditor ? `<button class="text-indigo-400 text-sm ml-1" data-action="edit-item" data-type="category" data-id="${cat.id}">✏️</button>` : ''}</h4>
-                        <p class="text-xs text-gray-400">Budget: ${formatCurrency(cat.budget)}</p>
+            <div class="category-card">
+                <div class="category-card-header">
+                    <div><h4>${cat.name}</h4><p class="text-xs text-gray-400">Budget: ${formatCurrency(cat.budget)}</p></div>
+                    <div class="actions">
+                        <span class="font-semibold text-indigo-400">${formatCurrency(totalExpenses)}</span>
+                        ${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="category" data-id="${cat.id}" title="Edit Category">${ICONS.edit}</button><button class="btn btn-icon text-danger" data-action="delete-category" data-id="${cat.id}" title="Delete Category">${ICONS.trash}</button>` : ''}
                     </div>
-                    <div><span class="font-semibold text-indigo-400">${formatCurrency(totalExpenses)}</span>${state.isEditor ? `<button class="btn-danger text-xs ml-2 px-2 py-1" data-action="delete-category" data-id="${cat.id}">X</button>` : ''}</div>
                 </div>
-                <ul class="space-y-2 mb-3">
+                <ul class="expense-list">
                     ${cat.expenses && cat.expenses.map(exp => {
                         const isEditingExp = state.editingItem?.type === 'expense' && state.editingItem.id === exp.id;
                         if (isEditingExp) {
-                            return `<li class="p-2 bg-gray-700 rounded-md"><form class="edit-expense-form space-y-2" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" class="w-full p-2 bg-gray-600 rounded-md text-white text-sm" required><div class="flex gap-2"><input type="number" name="amount" value="${exp.amount}" class="w-full p-2 bg-gray-600 rounded-md text-white text-sm" required><input type="date" name="date" value="${toInputDate(exp.date)}" class="w-full p-2 bg-gray-600 rounded-md text-white text-sm" required></div><input type="file" name="receipt" class="w-full text-xs text-gray-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-500 file:text-white hover:file:bg-indigo-600">${exp.receiptUrl ? `<div class="mt-1 text-xs">Current: <a href="${exp.receiptUrl}" target="_blank" class="text-indigo-400 hover:underline">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div class="flex gap-2"><button type="submit" class="w-full p-2 bg-indigo-500 text-sm rounded-md hover:bg-indigo-600" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="w-full p-2 bg-gray-600 text-sm rounded-md hover:bg-gray-700">Cancel</button></div></form></li>`;
+                            return `<li class="p-2 bg-gray-700 rounded-md"><form class="edit-expense-form" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" required><div class="form-grid"><input type="number" name="amount" value="${exp.amount}" required><input type="date" name="date" value="${toInputDate(exp.date)}" required></div><input type="file" name="receipt">${exp.receiptUrl ? `<div class="mt-1 text-xs">Current: <a href="${exp.receiptUrl}" target="_blank" class="btn-link">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div class="flex gap-2"><button type="submit" class="btn btn-primary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="btn btn-subtle btn-sm">Cancel</button></div></form></li>`;
                         }
-                        return `<li class="flex justify-between items-center text-sm"><div><span>${exp.description}</span><span class="text-xs text-gray-400 ml-2">${formatDate(exp.date)}</span> ${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="text-xs text-indigo-400 ml-2">📄</a>` : ''}</div><div><span>${formatCurrency(exp.amount)}</span>${state.isEditor ? `<button class="text-indigo-400 text-sm ml-2" data-action="edit-item" data-type="expense" data-category-id="${cat.id}" data-id="${exp.id}">✏️</button><button class="text-red-500 ml-2" data-action="delete-expense" data-category-id="${cat.id}" data-expense-id="${exp.id}">🗑️</button>` : ''}</div></li>`;
-                    }).join('')}
+                        return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${cat.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon text-danger" data-action="delete-expense" data-category-id="${cat.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
+                    }).join('') || `<li class="text-sm text-gray-400">No expenses added yet.</li>`}
                 </ul>
-                ${state.isEditor ? `<form class="add-expense-form space-y-2" data-category-id="${cat.id}"><input type="text" name="description" placeholder="Expense description" class="w-full p-2 bg-gray-700 rounded-md text-white text-sm" required><div class="flex gap-2"><input type="number" name="amount" placeholder="Amount" class="w-full p-2 bg-gray-700 rounded-md text-white text-sm" required><input type="date" name="date" value="${toInputDate(null)}" class="w-full p-2 bg-gray-700 rounded-md text-white text-sm" required></div><input type="file" name="receipt" class="w-full text-xs text-gray-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-500 file:text-white hover:file:bg-indigo-600"><button type="submit" class="w-full p-2 bg-indigo-500 text-sm rounded-md hover:bg-indigo-600" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Add Expense'}</button></form>` : ''}
+                ${state.isEditor ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" required></div><input type="file" name="receipt"><button type="submit" class="btn btn-secondary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Add Expense'}</button></form>` : ''}
             </div>`;
     }).join('');
 
     const totalCategoryBudget = state.categories.reduce((sum, cat) => sum + (Number(cat.budget) || 0), 0);
     const budgetExceeded = totalCategoryBudget > monthlyBudget.totalBudget;
 
-    return `<div class="grid lg:grid-cols-2 gap-8">
-        <div><h3 class="text-2xl font-bold mb-4">Spending Chart</h3><div class="bg-gray-800 p-4 rounded-lg"><canvas id="budget-chart"></canvas></div></div>
-        <div>
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-2xl font-bold">Categories</h3>
-                <div class="flex items-center gap-2 text-sm">
-                    <label for="sort-key" class="text-gray-400">Sort by:</label>
-                    <select id="sort-key" class="bg-gray-700 text-white text-xs p-1 rounded-md">
-                        <option value="name" ${state.sortConfig.key === 'name' ? 'selected' : ''}>Name</option>
-                        <option value="budget" ${state.sortConfig.key === 'budget' ? 'selected' : ''}>Budget</option>
-                    </select>
-                    <select id="sort-dir" class="bg-gray-700 text-white text-xs p-1 rounded-md">
-                        <option value="asc" ${state.sortConfig.direction === 'asc' ? 'selected' : ''}>Asc</option>
-                        <option value="desc" ${state.sortConfig.direction === 'desc' ? 'selected' : ''}>Desc</option>
-                    </select>
-                </div>
+    return `
+        <div class="main-content-grid">
+            <div class="card">
+                <h3 class="text-2xl font-bold mb-4">Spending Chart</h3>
+                <canvas id="budget-chart"></canvas>
             </div>
-            ${state.isEditor ? `<form id="add-category-form" class="grid grid-cols-3 gap-2 mb-4"><input type="text" name="name" placeholder="New category name" class="col-span-2 w-full p-2 bg-gray-700 rounded-md text-white" required><input type="number" name="budget" placeholder="Budget" class="w-full p-2 bg-gray-700 rounded-md text-white" required><button type="submit" class="col-span-3 p-2 bg-purple-600 rounded-md hover:bg-purple-700 font-semibold">Add Category</button></form>` : ''}
-            ${budgetExceeded ? `<div class="text-yellow-400 bg-yellow-900/50 text-sm p-2 rounded-md mb-4">Warning: Sum of category budgets (${formatCurrency(totalCategoryBudget)}) exceeds the total monthly budget.</div>` : ''}
-            <div class="space-y-4">${categoryListHtml || '<p class="text-gray-400">No categories added yet.</p>'}</div>
-        </div>
-    </div>`;
+            <div>
+                <div class="category-header">
+                    <h3 class="text-2xl font-bold">Categories</h3>
+                    <div class="flex items-center gap-2 text-sm">
+                        <label for="sort-key" class="text-gray-400">Sort by:</label>
+                        <select id="sort-key" class="bg-gray-700 text-white text-xs p-1 rounded-md">
+                            <option value="name" ${state.sortConfig.key === 'name' ? 'selected' : ''}>Name</option>
+                            <option value="budget" ${state.sortConfig.key === 'budget' ? 'selected' : ''}>Budget</option>
+                        </select>
+                        <select id="sort-dir" class="bg-gray-700 text-white text-xs p-1 rounded-md">
+                            <option value="asc" ${state.sortConfig.direction === 'asc' ? 'selected' : ''}>Asc</option>
+                            <option value="desc" ${state.sortConfig.direction === 'desc' ? 'selected' : ''}>Desc</option>
+                        </select>
+                    </div>
+                </div>
+                ${state.isEditor ? `<form id="add-category-form" class="card mb-4"><div class="form-grid"><input type="text" name="name" placeholder="New category name" required><input type="number" name="budget" placeholder="Budget" required></div><button type="submit" class="btn btn-primary">${ICONS.plus} Add Category</button></form>` : ''}
+                ${budgetExceeded ? `<div class="notification warning">Warning: Sum of category budgets (${formatCurrency(totalCategoryBudget)}) exceeds the total monthly budget.</div>` : ''}
+                <div class="category-list">${categoryListHtml || '<p class="text-gray-400">No categories added yet.</p>'}</div>
+            </div>
+        </div>`;
 }
 
 function renderAppView() {
@@ -216,19 +232,27 @@ function renderAppView() {
 
     if (state.monthlyBudgets.length > 0 && selectedMonthlyBudget) {
         const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
-        mainContent = `<div class="flex justify-between items-center mb-6">
-                <div class="flex-grow"><label for="month-select" class="block text-sm font-medium text-gray-300 mb-1">Select Budget Month:</label><select id="month-select" class="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">${state.monthlyBudgets.map(b => `<option value="${b.id}" ${b.id === state.selectedMonthId ? 'selected' : ''}>${b.title} (${b.nomerPengajuan})</option>`).join('')}</select></div>
-                <button id="download-csv-btn" class="ml-4 mt-6 p-3 bg-green-600 rounded-md font-semibold hover:bg-green-700">Report (CSV)</button>
+        mainContent = `
+            <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
+                <div class="flex-grow"><label for="month-select">Select Budget Month:</label><select id="month-select">${state.monthlyBudgets.map(b => `<option value="${b.id}" ${b.id === state.selectedMonthId ? 'selected' : ''}>${b.title} (${b.nomerPengajuan})</option>`).join('')}</select></div>
+                <button id="download-csv-btn" class="btn btn-success">${ICONS.download} Report (CSV)</button>
             </div>
             ${state.editingItem?.type === 'budget' ? '' : renderBudgetOverview(selectedMonthlyBudget, totalSpent)}
             ${renderCategorySection(selectedMonthlyBudget)}`;
     } else {
-        mainContent = `<div class="text-center p-10 bg-gray-800 rounded-lg"><h3 class="text-xl text-white">No monthly budgets created yet.</h3>${state.isEditor ? '<p class="text-gray-400 mt-2">Use the form above to create your first one.</p>' : ''}</div>`;
+        mainContent = `<div class="text-center p-10 card"><h3 class="text-xl text-white">No monthly budgets created yet.</h3>${state.isEditor ? '<p class="text-gray-400 mt-2">Use the form below to create your first one.</p>' : ''}</div>`;
     }
 
     const showAddBudgetForm = state.isEditor && (state.editingItem?.type === 'budget' || state.monthlyBudgets.length === 0);
 
-    return `<div class="app-main-container"><header class="flex justify-between items-center mb-6"><h1 class="text-4xl font-extrabold">Monthly Budget Tracker</h1><div>${state.isEditor ? `<button id="share-btn" class="btn-share mr-2">Share</button>` : ''}${state.user ? `<button id="logout-btn" class="btn-danger">Logout</button>` : ''}</div></header>
+    return `<div class="app-main-container">
+                <header>
+                    <h1>Monthly Budget Tracker</h1>
+                    <div class="header-actions">
+                        ${state.isEditor ? `<button id="share-btn" class="btn btn-secondary">${ICONS.share} Share</button>` : ''}
+                        ${state.user ? `<button id="logout-btn" class="btn btn-danger">Logout</button>` : ''}
+                    </div>
+                </header>
                 ${showAddBudgetForm ? renderAddOrEditBudgetForm() : ''}
                 <main id="app-content">${mainContent}</main>
             </div>`;
@@ -257,7 +281,9 @@ function attachEventListeners() {
     if (!appContainer) return;
 
     appContainer.onclick = function(e) {
-        const target = e.target;
+        const target = e.target.closest('[data-action], button, a');
+        if (!target) return;
+        
         const action = target.dataset.action;
 
         if (target.matches('a[data-view]')) { e.preventDefault(); state.authView = target.dataset.view; state.error = null; state.notification = null; render(); }
@@ -265,8 +291,8 @@ function attachEventListeners() {
         else if (target.id === 'share-btn') { handleShare(); }
         else if (target.id === 'download-csv-btn') { handleDownloadCSV(); }
         else if (action === 'toggle-password') { togglePasswordVisibility(target); }
-        else if (action === 'delete-category') { handleDeleteCategory(target.dataset.id); }
-        else if (action === 'delete-expense') { handleDeleteExpense(target.dataset.categoryId, target.dataset.expenseId); }
+        else if (action === 'delete-category') { handleDeleteCategory(target.closest('[data-id]').dataset.id); }
+        else if (action === 'delete-expense') { handleDeleteExpense(target.closest('[data-category-id]').dataset.categoryId, target.closest('[data-expense-id]').dataset.expenseId); }
         else if (action === 'edit-item') { state.editingItem = { type: target.dataset.type, id: target.dataset.id, categoryId: target.dataset.categoryId }; render(); }
         else if (action === 'cancel-edit') { state.editingItem = null; render(); }
     };
@@ -288,17 +314,27 @@ function handleShare() {
         navigator.clipboard.writeText(shareUrl).then(() => alert('View-only link copied to clipboard!')).catch(err => { console.error('Failed to copy: ', err); prompt("Copy this link:", shareUrl); });
     } else { alert('Please select a month to share.'); }
 }
-function togglePasswordVisibility(button) { const input = button.previousElementSibling; if (input.type === 'password') { input.type = 'text'; button.textContent = '🙈'; } else { input.type = 'password'; button.textContent = '👁️'; } }
+function togglePasswordVisibility(button) { 
+    const wrapper = button.closest('.password-wrapper');
+    const input = wrapper.querySelector('input');
+    if (input.type === 'password') { 
+        input.type = 'text'; 
+        button.innerHTML = ICONS.eyeSlash;
+    } else { 
+        input.type = 'password'; 
+        button.innerHTML = ICONS.eye;
+    } 
+}
 
 async function handleFileUpload(file) {
-    if (!file) return null;
+    if (!file || file.size === 0) return null;
     state.isUploading = true;
     render();
     const storageRef = ref(storage, `uploads/${state.user.uid}/${Date.now()}-${file.name}`);
     const snapshot = await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(snapshot.ref);
     state.isUploading = false;
-    render();
+    // Do not re-render here, let the form submission handler do it.
     return { url: downloadURL, name: file.name };
 }
 
@@ -352,7 +388,6 @@ async function handleFormSubmit(form) {
                 if (uploadResult) { updateData.approvalDocUrl = uploadResult.url; updateData.approvalDocName = uploadResult.name; }
                 await updateDoc(docRef, updateData);
                 state.editingItem = null;
-                render();
                 break;
             }
             case 'add-category-form':
@@ -372,7 +407,6 @@ async function handleFormSubmit(form) {
                 } else if (form.classList.contains('edit-category-form')) {
                     await updateDoc(doc(db, `users/${state.user.uid}/categories`, form.dataset.id), { name: data.name, budget: Number(data.budget) });
                     state.editingItem = null;
-                    render();
                 } else if (form.classList.contains('edit-expense-form')) {
                     const { categoryId, expenseId } = form.dataset;
                     const file = formData.get('receipt');
@@ -388,10 +422,13 @@ async function handleFormSubmit(form) {
                     });
                     await updateDoc(doc(db, `users/${state.user.uid}/categories`, categoryId), { expenses: newExpenses });
                     state.editingItem = null;
-                    render();
                 }
         }
-    } catch (err) { state.error = err.message; render(); }
+    } catch (err) { state.error = err.message; }
+    finally {
+        state.isUploading = false;
+        render(); // Always re-render after a form submission
+    }
 }
 
 function handleDownloadCSV() {
