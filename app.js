@@ -128,9 +128,12 @@ function renderAddOrEditBudgetForm() {
              ${budget?.approvalDocUrl ? `<div style="margin-top: 0.5rem; font-size: 0.75rem;">Current: <a href="${budget.approvalDocUrl}" target="_blank" class="btn-link">${budget.approvalDocName || 'View File'}</a></div>` : ''}
             </div>
         </div>
-        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-            <button type="submit" class="btn btn-primary" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? 'Uploading...' : (isEditing ? 'Save Changes' : 'Create Budget')}</button>
-            <button type="button" data-action="cancel-edit" class="btn btn-subtle">Cancel</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-top: 1rem;">
+            <div>
+                <button type="submit" class="btn btn-primary" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? 'Uploading...' : (isEditing ? 'Save Changes' : 'Create Budget')}</button>
+                <button type="button" data-action="cancel-edit" class="btn">Cancel</button>
+            </div>
+            ${isEditing ? `<button type="button" data-action="delete-budget" data-id="${budget.id}" class="btn btn-danger">Delete Budget</button>` : ''}
         </div>
     </form>`;
 }
@@ -145,17 +148,24 @@ function renderProgressBar(current, total) {
     return `<div class="progress-bar-container"><div class="progress-bar ${barClass}" style="width: ${displayPercentage}%"></div></div>`;
 }
 
-function renderBudgetOverview(budget) {
+function renderDashboard(budget) {
     const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
     const remaining = budget.totalBudget - totalSpent;
     return `
-        <div style="margin-bottom: 2rem;">
-            <div class="stats-grid">
-                <div class="stat-card"><div class="label">Total Budget</div><div class="value positive">${formatCurrency(budget.totalBudget)}</div></div>
-                <div class="stat-card"><div class="label">Spent</div><div class="value neutral">${formatCurrency(totalSpent)}</div></div>
-                <div class="stat-card"><div class="label">Remaining</div><div class="value ${remaining < 0 ? 'negative' : 'positive'}">${formatCurrency(remaining)}</div></div>
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3 style="font-size: 1.25rem; font-weight: 600; margin:0 0 1rem 0;">Overview</h3>
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="label">Total Budget</div><div class="value positive">${formatCurrency(budget.totalBudget)}</div></div>
+                    <div class="stat-card"><div class="label">Spent</div><div class="value neutral">${formatCurrency(totalSpent)}</div></div>
+                    <div class="stat-card"><div class="label">Remaining</div><div class="value ${remaining < 0 ? 'negative' : 'positive'}">${formatCurrency(remaining)}</div></div>
+                </div>
+                ${renderProgressBar(totalSpent, budget.totalBudget)}
             </div>
-            ${renderProgressBar(totalSpent, budget.totalBudget)}
+            <div class="card">
+                 <h3 style="font-size: 1.25rem; font-weight: 600; margin:0 0 1rem 0;">Spending Chart</h3>
+                <canvas id="budget-chart" style="max-height: 200px;"></canvas>
+            </div>
         </div>`;
 }
 
@@ -171,30 +181,30 @@ function renderCategorySection(monthlyBudget) {
     const categoryListHtml = sortedCategories.map(cat => {
         const isEditingCat = state.editingItem?.type === 'category' && state.editingItem.id === cat.id;
         if (isEditingCat) {
-            return `<form class="edit-category-form card" data-id="${cat.id}"><h4 style="font-size: 1.125rem; font-weight: 700; margin:0 0 1rem 0;">Edit Category</h4><div class="form-grid"><input type="text" name="name" value="${cat.name}" required><input type="number" name="budget" value="${cat.budget || ''}" placeholder="Category Budget" required></div><div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm">Save</button><button type="button" data-action="cancel-edit" class="btn btn-subtle btn-sm">Cancel</button></div></form>`;
+            return `<form class="edit-category-form card" data-id="${cat.id}"><h4 style="font-size: 1.125rem; font-weight: 700; margin:0 0 1rem 0;">Edit Category</h4><div class="form-grid"><input type="text" name="name" value="${cat.name}" required><input type="number" name="budget" value="${cat.budget || ''}" placeholder="Category Budget" required></div><div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm">Save</button><button type="button" data-action="cancel-edit" class="btn btn-sm">Cancel</button></div></form>`;
         }
 
         const totalExpenses = cat.expenses ? cat.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
         return `
             <div class="category-card">
                 <div class="category-card-header">
-                    <div><h4>${cat.name}</h4><p style="font-size: 0.75rem; color: var(--text-med); margin: 0.25rem 0 0 0;">Budget: ${formatCurrency(cat.budget)}</p></div>
+                    <div><h4>${cat.name}</h4></div>
                     <div class="actions">
-                        <span style="font-weight: 600; color: var(--primary);">${formatCurrency(totalExpenses)}</span>
                         ${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="category" data-id="${cat.id}" title="Edit Category">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-category" data-id="${cat.id}" title="Delete Category">${ICONS.trash}</button>` : ''}
                     </div>
                 </div>
+                <div class="category-budget-info">Used ${formatCurrency(totalExpenses)} of ${formatCurrency(cat.budget)}</div>
                 ${renderProgressBar(totalExpenses, cat.budget)}
                 <ul class="expense-list">
                     ${cat.expenses && cat.expenses.map(exp => {
                         const isEditingExp = state.editingItem?.type === 'expense' && state.editingItem.id === exp.id;
                         if (isEditingExp) {
-                            return `<li class="p-2 bg-gray-700 rounded-md"><form class="edit-expense-form" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" required><div class="form-grid"><input type="number" name="amount" value="${exp.amount}" required><input type="date" name="date" value="${toInputDate(exp.date)}" required></div><input type="file" name="receipt">${exp.receiptUrl ? `<div style="margin-top: 0.25rem; font-size: 0.75rem;">Current: <a href="${exp.receiptUrl}" target="_blank" class="btn-link">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="btn btn-subtle btn-sm">Cancel</button></div></form></li>`;
+                            return `<li style="padding: 1rem; background-color: var(--bg-med); border-radius: var(--border-radius); border: 1px solid var(--border-color);"><form class="edit-expense-form" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" required><div class="form-grid"><input type="number" name="amount" value="${exp.amount}" required><input type="date" name="date" value="${toInputDate(exp.date)}" required></div><input type="file" name="receipt">${exp.receiptUrl ? `<div style="margin-top: 0.25rem; font-size: 0.75rem;">Current: <a href="${exp.receiptUrl}" target="_blank" class="btn-link">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="btn btn-sm">Cancel</button></div></form></li>`;
                         }
                         return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${cat.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-expense" data-category-id="${cat.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
                     }).join('') || `<li class="text-sm text-gray-400">No expenses added yet.</li>`}
                 </ul>
-                ${state.isEditor ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" required></div><input type="file" name="receipt"><button type="submit" class="btn btn-secondary btn-sm" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add Expense'}</button></form>` : ''}
+                ${state.isEditor ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" required></div><input type="file" name="receipt"><button type="submit" class="btn btn-sm" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add Expense'}</button></form>` : ''}
             </div>`;
     }).join('');
 
@@ -202,30 +212,24 @@ function renderCategorySection(monthlyBudget) {
     const budgetExceeded = totalCategoryBudget > monthlyBudget.totalBudget;
 
     return `
-        <div class="main-content-grid">
-            <div class="card">
-                <h3 style="font-size: 1.5rem; font-weight: 700; margin:0 0 1rem 0;">Spending Chart</h3>
-                <canvas id="budget-chart"></canvas>
-            </div>
-            <div>
-                <div class="category-header">
-                    <h3 style="font-size: 1.5rem; font-weight: 700; margin:0;">Categories</h3>
-                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
-                        <label for="sort-key">Sort by:</label>
-                        <select id="sort-key"><option value="name" ${state.sortConfig.key === 'name' ? 'selected' : ''}>Name</option><option value="budget" ${state.sortConfig.key === 'budget' ? 'selected' : ''}>Budget</option></select>
-                        <select id="sort-dir"><option value="asc" ${state.sortConfig.direction === 'asc' ? 'selected' : ''}>Asc</option><option value="desc" ${state.sortConfig.direction === 'desc' ? 'selected' : ''}>Desc</option></select>
-                    </div>
+        <div>
+            <div class="category-header">
+                <h3 style="font-size: 1.5rem; font-weight: 700; margin:0;">Categories</h3>
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
+                    <label for="sort-key">Sort by:</label>
+                    <select id="sort-key"><option value="name" ${state.sortConfig.key === 'name' ? 'selected' : ''}>Name</option><option value="budget" ${state.sortConfig.key === 'budget' ? 'selected' : ''}>Budget</option></select>
+                    <select id="sort-dir"><option value="asc" ${state.sortConfig.direction === 'asc' ? 'selected' : ''}>Asc</option><option value="desc" ${state.sortConfig.direction === 'desc' ? 'selected' : ''}>Desc</option></select>
                 </div>
-                ${state.isEditor ? `<form id="add-category-form" class="card" style="margin-bottom: 1.5rem;"><div class="form-grid"><input type="text" name="name" placeholder="New category name" required><input type="number" name="budget" placeholder="Budget" required></div><button type="submit" class="btn btn-primary" style="margin-top: 1rem;">${ICONS.plus} Add Category</button></form>` : ''}
-                ${budgetExceeded ? `<div class="notification warning">Warning: Sum of category budgets (${formatCurrency(totalCategoryBudget)}) exceeds the total monthly budget.</div>` : ''}
-                <div class="category-list">${categoryListHtml || '<p style="color: var(--text-med);">No categories added yet.</p>'}</div>
             </div>
+            ${state.isEditor ? `<form id="add-category-form" class="card" style="margin-bottom: 1.5rem;"><div class="form-grid"><input type="text" name="name" placeholder="New category name" required><input type="number" name="budget" placeholder="Budget" required></div><button type="submit" class="btn btn-primary" style="margin-top: 1rem;">${ICONS.plus} Add Category</button></form>` : ''}
+            ${budgetExceeded ? `<div class="notification warning">Warning: Sum of category budgets (${formatCurrency(totalCategoryBudget)}) exceeds the total monthly budget.</div>` : ''}
+            <div class="category-list">${categoryListHtml || '<p style="color: var(--text-med);">No categories added yet.</p>'}</div>
         </div>`;
 }
 
 function renderAppView() {
     if (state.isLoading) {
-        return `<div class="loader-container"><div class="loader"></div><p class="loader-text">Loading Data...</p></div>`;
+        return `<div class="loader-container"><div class="loader"></div><p class="loader-text">Loading Application...</p></div>`;
     }
 
     const selectedMonthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
@@ -234,11 +238,11 @@ function renderAppView() {
         <header>
             <div>
                 <h1>${selectedMonthlyBudget ? selectedMonthlyBudget.title : 'Budget Tracker'}</h1>
-                ${selectedMonthlyBudget ? `<p style="color: var(--text-med); margin: 0.25rem 0 0 0;">Nomer Pengajuan: ${selectedMonthlyBudget.nomerPengajuan}</p>` : ''}
+                ${selectedMonthlyBudget ? `<p class="page-subtitle">Nomer Pengajuan: ${selectedMonthlyBudget.nomerPengajuan}</p>` : ''}
             </div>
             <div class="header-actions">
                 ${state.isEditor ? `<button class="btn btn-primary" data-action="add-budget">${ICONS.plus} New Budget</button>` : ''}
-                ${state.isEditor ? `<button id="share-btn" class="btn btn-secondary">${ICONS.share} Share</button>` : ''}
+                ${state.isEditor && selectedMonthlyBudget ? `<button id="share-btn" class="btn">${ICONS.share} Share</button>` : ''}
                 ${state.user ? `<button id="logout-btn" class="btn btn-danger">Logout</button>` : ''}
             </div>
         </header>`;
@@ -251,11 +255,11 @@ function renderAppView() {
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
                 <div style="flex-grow: 1;"><label for="month-select">Select Budget:</label><select id="month-select">${state.monthlyBudgets.map(b => `<option value="${b.id}" ${b.id === state.selectedMonthId ? 'selected' : ''}>${b.title} (${b.nomerPengajuan})</option>`).join('')}</select></div>
                 <div style="display: flex; gap: 0.5rem;">
-                    <button class="btn btn-subtle" data-action="edit-item" data-type="budget" data-id="${selectedMonthlyBudget.id}">${ICONS.edit} Edit Current</button>
-                    <button id="download-csv-btn" class="btn btn-success">${ICONS.download} Report</button>
+                    <button class="btn btn-icon" data-action="edit-item" data-type="budget" data-id="${selectedMonthlyBudget.id}" title="Edit Current Budget">${ICONS.edit}</button>
+                    <button id="download-csv-btn" class="btn btn-icon" title="Download Report">${ICONS.download}</button>
                 </div>
             </div>
-            ${renderBudgetOverview(selectedMonthlyBudget)}
+            ${renderDashboard(selectedMonthlyBudget)}
             ${renderCategorySection(selectedMonthlyBudget)}`;
     } else {
         mainContent = `<div class="text-center p-10 card"><h3 style="font-size: 1.25rem;">No monthly budgets found.</h3>${state.isEditor ? `<p style="color: var(--text-med); margin-top: 0.5rem;">Click "New Budget" to get started.</p>` : ''}</div>`;
@@ -279,7 +283,7 @@ function renderChartJS(budget) {
         data.push(remaining);
     }
 
-    chartInstance = new Chart(ctx, { type: 'pie', data: { labels: labels.length > 0 ? labels : ['No Data'], datasets: [{ label: 'Amount', data: data.length > 0 ? data : [1], backgroundColor: ['#4f46e5', '#9333ea', '#db2777', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#6b7280'], borderColor: '#1f2937', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: '#f3f4f6', font: { family: "'Inter', sans-serif" } } }, tooltip: { callbacks: { label: (context) => `${context.label || ''}: ${formatCurrency(context.parsed)}` } } } } });
+    chartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: labels.length > 0 ? labels : ['No Data'], datasets: [{ label: 'Amount', data: data.length > 0 ? data : [1], backgroundColor: ['#58a6ff', '#9333ea', '#db2777', '#d29922', '#3fb950', '#f85149', '#6e7681'], borderColor: '#161b22', borderWidth: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => `${context.label || ''}: ${formatCurrency(context.parsed)}` } } } } });
 }
 
 // --- EVENT HANDLERS & LOGIC ---
@@ -301,6 +305,7 @@ function attachEventListeners() {
         else if (action === 'toggle-password') { togglePasswordVisibility(target); }
         else if (action === 'delete-category') { handleDeleteCategory(target.closest('[data-id]').dataset.id); }
         else if (action === 'delete-expense') { handleDeleteExpense(target.closest('[data-category-id]').dataset.categoryId, target.closest('[data-expense-id]').dataset.expenseId); }
+        else if (action === 'delete-budget') { handleDeleteBudget(target.dataset.id); }
         else if (action === 'edit-item') { state.editingItem = { type: target.dataset.type, id: target.dataset.id, categoryId: target.dataset.categoryId }; render(); }
         else if (action === 'add-budget') { state.editingItem = { type: 'budget', id: null }; render(); }
         else if (action === 'cancel-edit') { state.editingItem = null; render(); }
@@ -344,6 +349,22 @@ async function handleFileUpload(file) {
     const downloadURL = await getDownloadURL(snapshot.ref);
     state.isUploading = false;
     return { url: downloadURL, name: file.name };
+}
+
+async function handleDeleteBudget(budgetId) {
+    if (confirm('Are you sure you want to delete this entire budget, including all its categories and expenses? This action cannot be undone.')) {
+        try {
+            // In a real app, you'd want to delete all sub-collections and storage files. 
+            // This is simplified for this example. A cloud function is better for this.
+            await deleteDoc(doc(db, `users/${state.user.uid}/monthlyBudgets`, budgetId));
+            state.editingItem = null;
+            state.selectedMonthId = ''; // Reset selection
+            // The onSnapshot will automatically re-render the list.
+        } catch (err) {
+            state.error = "Failed to delete budget.";
+            render();
+        }
+    }
 }
 
 async function handleDeleteCategory(categoryId) {
