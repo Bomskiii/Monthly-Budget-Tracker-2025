@@ -40,8 +40,8 @@ const ICONS = {
     download: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>`,
     plus: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/></svg>`,
     receipt: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M1.5 0A1.5 1.5 0 0 0 0 1.5v13A1.5 1.5 0 0 0 1.5 16h13a1.5 1.5 0 0 0 1.5-1.5v-13A1.5 1.5 0 0 0 14.5 0h-13zM8 13a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H8z"/></svg>`,
-    sortUp: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 12.5a.5.5 0 0 1-1 0V3.707L1.354 4.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L3.5 3.707V12.5zm3.5-9a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1z"/></svg>`,
-    sortDown: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 2.5a.5.5 0 0 0-1 0v8.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 2a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L3.5 11.293V2.5zm3.5 1a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1z"/></svg>`,
+    sortUp: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/></svg>`,
+    sortDown: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/></svg>`,
 };
 
 // --- HELPER FUNCTIONS ---
@@ -190,6 +190,8 @@ function renderCategorySection(monthlyBudget) {
 
         const totalExpenses = cat.expenses ? cat.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
         const remaining = cat.budget - totalExpenses;
+        const overBudgetHtml = `<span class="negative">Over Budget by ${formatCurrency(Math.abs(remaining))}</span>`;
+
         return `
             <div class="category-card">
                 <div class="category-card-header">
@@ -201,7 +203,7 @@ function renderCategorySection(monthlyBudget) {
                 <div class="category-budget-info">
                     <div>Total Budget<span>${formatCurrency(cat.budget)}</span></div>
                     <div>Used<span>${formatCurrency(totalExpenses)}</span></div>
-                    <div>Remaining<span class="${remaining < 0 ? 'negative' : 'positive'}">${formatCurrency(remaining)}</span></div>
+                    <div>${remaining < 0 ? overBudgetHtml : `Remaining<span class="positive">${formatCurrency(remaining)}</span>`}</div>
                 </div>
                 ${renderProgressBar(totalExpenses, cat.budget)}
                 <ul class="expense-list">
@@ -217,14 +219,9 @@ function renderCategorySection(monthlyBudget) {
             </div>`;
     }).join('');
 
-    const totalCategoryBudget = state.categories.reduce((sum, cat) => sum + (Number(cat.budget) || 0), 0);
-    if (totalCategoryBudget > monthlyBudget.totalBudget) {
-        showModal('Budget Warning', `The sum of your category budgets (${formatCurrency(totalCategoryBudget)}) exceeds the total monthly budget.`);
-    }
-
     return `
         <div>
-            <div class="category-header">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <h3 style="font-size: 1.5rem; font-weight: 700; margin:0;">Categories</h3>
                 <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
                     <span style="color: var(--text-med);">Sort:</span>
@@ -297,6 +294,9 @@ function renderChartJS(budget) {
 }
 
 function showModal(title, message) {
+    const existingModal = document.getElementById('error-modal');
+    if (existingModal) existingModal.remove();
+
     const modalHtml = `
         <div class="modal-overlay visible" id="error-modal" data-action="close-modal">
             <div class="modal-content">
@@ -388,8 +388,7 @@ async function handleDeleteBudget(budgetId) {
         try {
             await deleteDoc(doc(db, `users/${state.user.uid}/monthlyBudgets`, budgetId));
             state.editingItem = null;
-            // The onSnapshot listener will automatically trigger a re-render.
-            // We just need to ensure a valid budget is selected.
+            // The onSnapshot listener will automatically handle re-rendering and selecting the new latest budget.
         } catch (err) {
             showModal("Error", "Failed to delete budget.");
         }
@@ -612,20 +611,19 @@ function setupSnapshots() {
     const budgetsQuery = query(collection(db, `users/${userIdToFetch}/monthlyBudgets`), orderBy("creationDate", "desc"));
 
     monthlyUnsubscribe = onSnapshot(budgetsQuery, (snapshot) => {
-        const previousBudgetCount = state.monthlyBudgets.length;
+        const previousSelectedId = state.selectedMonthId;
         state.monthlyBudgets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         const selectedExists = state.monthlyBudgets.some(b => b.id === state.selectedMonthId);
         
-        // If the selected budget was deleted, or none was ever selected
-        if (!selectedExists || !state.selectedMonthId) {
+        if (!selectedExists) {
             state.selectedMonthId = state.monthlyBudgets.length > 0 ? state.monthlyBudgets[0].id : '';
         }
         
         state.isLoading = false;
-        // Only call setupCategory if the selection changed or it's the initial load
-        if (previousBudgetCount !== state.monthlyBudgets.length || !categoryUnsubscribe) {
-            setupCategorySnapshot();
+        
+        if (state.selectedMonthId !== previousSelectedId || !categoryUnsubscribe) {
+             setupCategorySnapshot();
         } else {
             render();
         }
