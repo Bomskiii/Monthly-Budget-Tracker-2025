@@ -119,17 +119,17 @@ function renderAddOrEditBudgetForm() {
     const budget = isEditing ? state.monthlyBudgets.find(b => b.id === state.editingItem.id) : null;
     
     return `<form id="${isEditing ? 'edit-budget-form' : 'add-budget-form'}" class="card">
-        <h2 class="text-2xl font-bold text-white mb-4">${isEditing ? 'Edit Monthly Budget' : 'Create New Monthly Budget'}</h2>
-        <div class="form-grid grid-cols-3">
-            <div><label for="budget-title">Budget Title</label><input type="text" id="budget-title" name="title" value="${budget?.title || ''}" placeholder="e.g., Q3 Marketing" required></div>
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1rem 0;">${isEditing ? 'Edit Monthly Budget' : 'Create New Monthly Budget'}</h2>
+        <div class="form-grid">
+            <div class="col-span-2"><label for="budget-title">Budget Title</label><input type="text" id="budget-title" name="title" value="${budget?.title || ''}" placeholder="e.g., Q3 Marketing" required></div>
             <div><label for="nomer-pengajuan">Nomer Pengajuan</label><input type="text" id="nomer-pengajuan" name="nomerPengajuan" value="${budget?.nomerPengajuan || ''}" placeholder="e.g., NP-001" required></div>
             <div><label for="creation-date">Creation Date</label><input type="date" id="creation-date" name="creationDate" value="${toInputDate(budget?.creationDate)}" required></div>
-            <div class="grid-col-span-2"><label for="total-budget">Total Budget Amount</label><input type="number" id="total-budget" name="totalBudget" value="${budget?.totalBudget || ''}" placeholder="e.g., 5000000" required></div>
-            <div class="grid-col-span-3"><label for="approval-doc">Proof of Approval (PDF/Image)</label><input type="file" id="approval-doc" name="approvalDoc">
-             ${budget?.approvalDocUrl ? `<div class="mt-2 text-xs">Current: <a href="${budget.approvalDocUrl}" target="_blank" class="btn-link">${budget.approvalDocName || 'View File'}</a></div>` : ''}
+            <div><label for="total-budget">Total Budget Amount</label><input type="number" id="total-budget" name="totalBudget" value="${budget?.totalBudget || ''}" placeholder="e.g., 5000000" required></div>
+            <div class="col-span-2"><label for="approval-doc">Proof of Approval (PDF/Image)</label><input type="file" id="approval-doc" name="approvalDoc">
+             ${budget?.approvalDocUrl ? `<div style="margin-top: 0.5rem; font-size: 0.75rem;">Current: <a href="${budget.approvalDocUrl}" target="_blank" class="btn-link">${budget.approvalDocName || 'View File'}</a></div>` : ''}
             </div>
         </div>
-        <div class="flex gap-2 mt-4">
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
             <button type="submit" class="btn btn-primary" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? 'Uploading...' : (isEditing ? 'Save Changes' : 'Create Budget')}</button>
             ${isEditing ? `<button type="button" data-action="cancel-edit" class="btn btn-subtle">Cancel</button>` : ''}
         </div>
@@ -139,17 +139,19 @@ function renderAddOrEditBudgetForm() {
 function renderBudgetOverview(budget, spent) {
     const remaining = budget.totalBudget - spent;
     return `
-        <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
-            <div>
-                <h3 class="text-2xl font-bold">${budget.title} <span class="text-lg font-normal text-gray-400">(${budget.nomerPengajuan})</span></h3>
-                <p class="text-sm text-gray-400">Created: ${formatDate(budget.creationDate)} ${budget.approvalDocUrl ? `| <a href="${budget.approvalDocUrl}" target="_blank" class="btn-link">View Approval</a>` : ''}</p>
+        <div style="margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <div>
+                    <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0;">${budget.title} <span style="font-weight: 400; color: var(--text-med);">(${budget.nomerPengajuan})</span></h3>
+                    <p style="font-size: 0.875rem; color: var(--text-med); margin: 0.25rem 0 0 0;">Created: ${formatDate(budget.creationDate)} ${budget.approvalDocUrl ? `| <a href="${budget.approvalDocUrl}" target="_blank" class="btn-link">View Approval</a>` : ''}</p>
+                </div>
+                ${state.isEditor ? `<button class="btn btn-subtle btn-sm" data-action="edit-item" data-type="budget" data-id="${budget.id}">${ICONS.edit} Edit Budget</button>` : ''}
             </div>
-            ${state.isEditor ? `<button class="btn btn-subtle btn-sm" data-action="edit-item" data-type="budget" data-id="${budget.id}">${ICONS.edit} Edit Budget</button>` : ''}
-        </div>
-        <div class="stats-grid">
-            <div class="stat-card"><div class="label">Total Budget</div><div class="value positive">${formatCurrency(budget.totalBudget)}</div></div>
-            <div class="stat-card"><div class="label">Spent</div><div class="value neutral">${formatCurrency(spent)}</div></div>
-            <div class="stat-card"><div class="label">Remaining</div><div class="value ${remaining < 0 ? 'negative' : 'positive'}">${formatCurrency(remaining)}</div></div>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="label">Total Budget</div><div class="value positive">${formatCurrency(budget.totalBudget)}</div></div>
+                <div class="stat-card"><div class="label">Spent</div><div class="value neutral">${formatCurrency(spent)}</div></div>
+                <div class="stat-card"><div class="label">Remaining</div><div class="value ${remaining < 0 ? 'negative' : 'positive'}">${formatCurrency(remaining)}</div></div>
+            </div>
         </div>`;
 }
 
@@ -165,29 +167,29 @@ function renderCategorySection(monthlyBudget) {
     const categoryListHtml = sortedCategories.map(cat => {
         const isEditingCat = state.editingItem?.type === 'category' && state.editingItem.id === cat.id;
         if (isEditingCat) {
-            return `<form class="edit-category-form card" data-id="${cat.id}"><h4 class="text-lg font-bold mb-2">Edit Category</h4><input type="text" name="name" value="${cat.name}" required><input type="number" name="budget" value="${cat.budget || ''}" placeholder="Category Budget" required><div class="flex gap-2"><button type="submit" class="btn btn-primary btn-sm">Save</button><button type="button" data-action="cancel-edit" class="btn btn-subtle btn-sm">Cancel</button></div></form>`;
+            return `<form class="edit-category-form card" data-id="${cat.id}"><h4 style="font-size: 1.125rem; font-weight: 700; margin:0 0 1rem 0;">Edit Category</h4><div class="form-grid"><input type="text" name="name" value="${cat.name}" required><input type="number" name="budget" value="${cat.budget || ''}" placeholder="Category Budget" required></div><div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm">Save</button><button type="button" data-action="cancel-edit" class="btn btn-subtle btn-sm">Cancel</button></div></form>`;
         }
 
         const totalExpenses = cat.expenses ? cat.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
         return `
             <div class="category-card">
                 <div class="category-card-header">
-                    <div><h4>${cat.name}</h4><p class="text-xs text-gray-400">Budget: ${formatCurrency(cat.budget)}</p></div>
+                    <div><h4>${cat.name}</h4><p style="font-size: 0.75rem; color: var(--text-med); margin: 0.25rem 0 0 0;">Budget: ${formatCurrency(cat.budget)}</p></div>
                     <div class="actions">
-                        <span class="font-semibold text-indigo-400">${formatCurrency(totalExpenses)}</span>
-                        ${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="category" data-id="${cat.id}" title="Edit Category">${ICONS.edit}</button><button class="btn btn-icon text-danger" data-action="delete-category" data-id="${cat.id}" title="Delete Category">${ICONS.trash}</button>` : ''}
+                        <span style="font-weight: 600; color: var(--primary);">${formatCurrency(totalExpenses)}</span>
+                        ${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="category" data-id="${cat.id}" title="Edit Category">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-category" data-id="${cat.id}" title="Delete Category">${ICONS.trash}</button>` : ''}
                     </div>
                 </div>
                 <ul class="expense-list">
                     ${cat.expenses && cat.expenses.map(exp => {
                         const isEditingExp = state.editingItem?.type === 'expense' && state.editingItem.id === exp.id;
                         if (isEditingExp) {
-                            return `<li class="p-2 bg-gray-700 rounded-md"><form class="edit-expense-form" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" required><div class="form-grid"><input type="number" name="amount" value="${exp.amount}" required><input type="date" name="date" value="${toInputDate(exp.date)}" required></div><input type="file" name="receipt">${exp.receiptUrl ? `<div class="mt-1 text-xs">Current: <a href="${exp.receiptUrl}" target="_blank" class="btn-link">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div class="flex gap-2"><button type="submit" class="btn btn-primary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="btn btn-subtle btn-sm">Cancel</button></div></form></li>`;
+                            return `<li class="p-2 bg-gray-700 rounded-md"><form class="edit-expense-form" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" required><div class="form-grid"><input type="number" name="amount" value="${exp.amount}" required><input type="date" name="date" value="${toInputDate(exp.date)}" required></div><input type="file" name="receipt">${exp.receiptUrl ? `<div style="margin-top: 0.25rem; font-size: 0.75rem;">Current: <a href="${exp.receiptUrl}" target="_blank" class="btn-link">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="btn btn-subtle btn-sm">Cancel</button></div></form></li>`;
                         }
-                        return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${cat.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon text-danger" data-action="delete-expense" data-category-id="${cat.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
+                        return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${cat.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-expense" data-category-id="${cat.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
                     }).join('') || `<li class="text-sm text-gray-400">No expenses added yet.</li>`}
                 </ul>
-                ${state.isEditor ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" required></div><input type="file" name="receipt"><button type="submit" class="btn btn-secondary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Add Expense'}</button></form>` : ''}
+                ${state.isEditor ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" required></div><input type="file" name="receipt"><button type="submit" class="btn btn-secondary btn-sm" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add Expense'}</button></form>` : ''}
             </div>`;
     }).join('');
 
@@ -197,27 +199,21 @@ function renderCategorySection(monthlyBudget) {
     return `
         <div class="main-content-grid">
             <div class="card">
-                <h3 class="text-2xl font-bold mb-4">Spending Chart</h3>
+                <h3 style="font-size: 1.5rem; font-weight: 700; margin:0 0 1rem 0;">Spending Chart</h3>
                 <canvas id="budget-chart"></canvas>
             </div>
             <div>
                 <div class="category-header">
-                    <h3 class="text-2xl font-bold">Categories</h3>
-                    <div class="flex items-center gap-2 text-sm">
-                        <label for="sort-key" class="text-gray-400">Sort by:</label>
-                        <select id="sort-key" class="bg-gray-700 text-white text-xs p-1 rounded-md">
-                            <option value="name" ${state.sortConfig.key === 'name' ? 'selected' : ''}>Name</option>
-                            <option value="budget" ${state.sortConfig.key === 'budget' ? 'selected' : ''}>Budget</option>
-                        </select>
-                        <select id="sort-dir" class="bg-gray-700 text-white text-xs p-1 rounded-md">
-                            <option value="asc" ${state.sortConfig.direction === 'asc' ? 'selected' : ''}>Asc</option>
-                            <option value="desc" ${state.sortConfig.direction === 'desc' ? 'selected' : ''}>Desc</option>
-                        </select>
+                    <h3 style="font-size: 1.5rem; font-weight: 700; margin:0;">Categories</h3>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
+                        <label for="sort-key">Sort by:</label>
+                        <select id="sort-key"><option value="name" ${state.sortConfig.key === 'name' ? 'selected' : ''}>Name</option><option value="budget" ${state.sortConfig.key === 'budget' ? 'selected' : ''}>Budget</option></select>
+                        <select id="sort-dir"><option value="asc" ${state.sortConfig.direction === 'asc' ? 'selected' : ''}>Asc</option><option value="desc" ${state.sortConfig.direction === 'desc' ? 'selected' : ''}>Desc</option></select>
                     </div>
                 </div>
-                ${state.isEditor ? `<form id="add-category-form" class="card mb-4"><div class="form-grid"><input type="text" name="name" placeholder="New category name" required><input type="number" name="budget" placeholder="Budget" required></div><button type="submit" class="btn btn-primary">${ICONS.plus} Add Category</button></form>` : ''}
+                ${state.isEditor ? `<form id="add-category-form" class="card" style="margin-bottom: 1.5rem;"><div class="form-grid"><input type="text" name="name" placeholder="New category name" required><input type="number" name="budget" placeholder="Budget" required></div><button type="submit" class="btn btn-primary" style="margin-top: 1rem;">${ICONS.plus} Add Category</button></form>` : ''}
                 ${budgetExceeded ? `<div class="notification warning">Warning: Sum of category budgets (${formatCurrency(totalCategoryBudget)}) exceeds the total monthly budget.</div>` : ''}
-                <div class="category-list">${categoryListHtml || '<p class="text-gray-400">No categories added yet.</p>'}</div>
+                <div class="category-list">${categoryListHtml || '<p style="color: var(--text-med);">No categories added yet.</p>'}</div>
             </div>
         </div>`;
 }
@@ -233,14 +229,14 @@ function renderAppView() {
     if (state.monthlyBudgets.length > 0 && selectedMonthlyBudget) {
         const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
         mainContent = `
-            <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
-                <div class="flex-grow"><label for="month-select">Select Budget Month:</label><select id="month-select">${state.monthlyBudgets.map(b => `<option value="${b.id}" ${b.id === state.selectedMonthId ? 'selected' : ''}>${b.title} (${b.nomerPengajuan})</option>`).join('')}</select></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                <div style="flex-grow: 1;"><label for="month-select">Select Budget Month:</label><select id="month-select">${state.monthlyBudgets.map(b => `<option value="${b.id}" ${b.id === state.selectedMonthId ? 'selected' : ''}>${b.title} (${b.nomerPengajuan})</option>`).join('')}</select></div>
                 <button id="download-csv-btn" class="btn btn-success">${ICONS.download} Report (CSV)</button>
             </div>
             ${state.editingItem?.type === 'budget' ? '' : renderBudgetOverview(selectedMonthlyBudget, totalSpent)}
             ${renderCategorySection(selectedMonthlyBudget)}`;
     } else {
-        mainContent = `<div class="text-center p-10 card"><h3 class="text-xl text-white">No monthly budgets created yet.</h3>${state.isEditor ? '<p class="text-gray-400 mt-2">Use the form below to create your first one.</p>' : ''}</div>`;
+        mainContent = `<div class="text-center p-10 card"><h3 style="font-size: 1.25rem;">No monthly budgets created yet.</h3>${state.isEditor ? '<p style="color: var(--text-med); margin-top: 0.5rem;">Use the form below to create your first one.</p>' : ''}</div>`;
     }
 
     const showAddBudgetForm = state.isEditor && (state.editingItem?.type === 'budget' || state.monthlyBudgets.length === 0);
@@ -272,7 +268,7 @@ function renderChartJS(budget, spent) {
         data.push(remaining);
     }
 
-    chartInstance = new Chart(ctx, { type: 'pie', data: { labels: labels.length > 0 ? labels : ['No Data'], datasets: [{ label: 'Amount', data: data.length > 0 ? data : [1], backgroundColor: ['#4f46e5', '#9333ea', '#db2777', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#6b7280'], borderColor: '#1f2937', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: '#f3f4f6' } }, tooltip: { callbacks: { label: (context) => `${context.label || ''}: ${formatCurrency(context.parsed)}` } } } } });
+    chartInstance = new Chart(ctx, { type: 'pie', data: { labels: labels.length > 0 ? labels : ['No Data'], datasets: [{ label: 'Amount', data: data.length > 0 ? data : [1], backgroundColor: ['#4f46e5', '#9333ea', '#db2777', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#6b7280'], borderColor: '#1f2937', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: '#f3f4f6', font: { family: "'Inter', sans-serif" } } }, tooltip: { callbacks: { label: (context) => `${context.label || ''}: ${formatCurrency(context.parsed)}` } } } } });
 }
 
 // --- EVENT HANDLERS & LOGIC ---
@@ -334,7 +330,6 @@ async function handleFileUpload(file) {
     const snapshot = await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(snapshot.ref);
     state.isUploading = false;
-    // Do not re-render here, let the form submission handler do it.
     return { url: downloadURL, name: file.name };
 }
 
