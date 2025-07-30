@@ -150,7 +150,6 @@ function renderAppView() {
         const selectedMonthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
         
         if (state.monthlyBudgets.length > 0 && selectedMonthlyBudget) {
-            // Main view when budgets exist
             mainContent = `
                 <div class="mb-8">
                     <label for="month-select" class="block text-lg font-medium text-gray-300 mb-2">Select Budget Month:</label>
@@ -161,7 +160,6 @@ function renderAppView() {
                 <!-- Overview, Chart, and Category content will be rendered here -->
             `;
         } else {
-            // View for new users with no budgets
             mainContent = `
                 <div class="text-center p-10 bg-gray-800 rounded-lg">
                     <h3 class="text-xl text-white">No monthly budgets created yet.</h3>
@@ -171,7 +169,6 @@ function renderAppView() {
         }
     }
 
-    // FIX: The AddMonthlyBudgetForm was missing from the render logic.
     return `<div class="app-main-container">
                 <header>
                     <h1>Monthly Budget Tracker</h1>
