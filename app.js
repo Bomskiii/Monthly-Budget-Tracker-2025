@@ -11,8 +11,6 @@ import { getFirestore, collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- GLOBAL STATE & CONFIG ---
-// NOTE: We no longer declare firebaseConfig here. It will be accessed inside the initialize function.
-
 let db, storage, auth;
 let chartInstance = null;
 
@@ -133,7 +131,24 @@ function renderAuthView() {
 }
 
 function renderAppView() {
-    // This function will be filled with the main application UI logic
+    const selectedMonthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
+    let mainContent = '';
+
+    if (state.isLoading) {
+        mainContent = `<div class="loader-container"><div class="loader"></div><p class="loader-text">Loading Data...</p></div>`;
+    } else if (state.monthlyBudgets.length > 0 && selectedMonthlyBudget) {
+        mainContent = `
+            <!-- Monthly Overview, Chart, Forms, etc. -->
+        `;
+    } else {
+        mainContent = `
+            <div class="text-center p-10 bg-gray-800 rounded-lg">
+                <h3 class="text-xl text-white">No monthly budgets created yet.</h3>
+                ${state.isEditor ? '<p class="text-gray-400">Use the form above to create your first one.</p>' : ''}
+            </div>
+        `;
+    }
+
     return `<div class="app-main-container">
                 <header>
                     <h1>Monthly Budget Tracker</h1>
@@ -142,7 +157,8 @@ function renderAppView() {
                         ${state.user ? `<button id="logout-btn" class="btn-danger">Logout</button>` : ''}
                     </div>
                 </header>
-                <main id="app-content"></main>
+                ${state.isEditor ? `<!-- Add Monthly Budget Form will be rendered here -->` : ''}
+                <main id="app-content">${mainContent}</main>
             </div>`;
 }
 
@@ -156,11 +172,69 @@ function setupEventListeners() {
     const appContainer = document.getElementById('app-container');
     
     appContainer.addEventListener('click', (e) => {
-        // ... Event handling logic
+        const target = e.target;
+        
+        // Auth view switching
+        if (target.matches('a[data-view]')) {
+            e.preventDefault();
+            state.authView = target.dataset.view;
+            state.error = null;
+            state.notification = null;
+            render();
+            return;
+        }
+
+        if (target.id === 'logout-btn') {
+            signOut(auth).catch(err => console.error("Logout Error:", err));
+        }
+
+        if (target.id === 'share-btn') {
+            if (state.selectedMonthId) {
+                const shareUrl = `${window.location.origin}${window.location.pathname}?userId=${state.user.uid}&monthId=${state.selectedMonthId}`;
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    alert('View-only link copied to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    prompt("Copy this link:", shareUrl);
+                });
+            } else {
+                alert('Please select a month to share.');
+            }
+        }
     });
 
     appContainer.addEventListener('submit', (e) => {
-        // ... Form submission logic
+        e.preventDefault();
+        const formId = e.target.id;
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+
+        state.error = null;
+        state.notification = null;
+
+        if (formId === 'login-form') {
+            signInWithEmailAndPassword(auth, data.email, data.password)
+                .catch(err => {
+                    state.error = err.message;
+                    render();
+                });
+        } else if (formId === 'register-form') {
+            createUserWithEmailAndPassword(auth, data.email, data.password)
+                .catch(err => {
+                    state.error = err.message;
+                    render();
+                });
+        } else if (formId === 'forgot-password-form') {
+            sendPasswordResetEmail(auth, data.email)
+                .then(() => {
+                    state.notification = 'Password reset email sent!';
+                    render();
+                })
+                .catch(err => {
+                    state.error = err.message;
+                    render();
+                });
+        }
     });
 }
 
@@ -168,14 +242,12 @@ function setupEventListeners() {
 
 async function initialize() {
     try {
-        // FIX: Check if the config object is available on the window.
-        // If not, wait and retry. This resolves the race condition.
-        if (!window.firebaseConfig) {
-            console.error("Firebase config not loaded. Retrying in 100ms...");
+        if (typeof window.firebaseConfig === 'undefined') {
+            console.log("Firebase config not found, waiting...");
             setTimeout(initialize, 100);
             return;
         }
-
+        
         const app = initializeApp(window.firebaseConfig);
         db = getFirestore(app);
         storage = getStorage(app);
@@ -232,7 +304,7 @@ function setupSnapshots() {
     }
 
     if (monthlyUnsubscribe) monthlyUnsubscribe();
-    const monthlyCollectionPath = `/users/${userIdToFetch}/monthlyBudgets`; // Simplified path
+    const monthlyCollectionPath = `users/${userIdToFetch}/monthlyBudgets`;
     monthlyUnsubscribe = onSnapshot(query(collection(db, monthlyCollectionPath)), (snapshot) => {
         state.monthlyBudgets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         if (!state.selectedMonthId && state.monthlyBudgets.length > 0) {
@@ -241,7 +313,7 @@ function setupSnapshots() {
             state.selectedMonthId = '';
         }
         state.isLoading = false;
-        setupCategorySnapshot(); // This will trigger a re-render
+        setupCategorySnapshot();
     }, err => {
         console.error("Error fetching monthly budgets:", err);
         state.isLoading = false;
@@ -259,7 +331,7 @@ function setupCategorySnapshot() {
         return;
     }
     
-    const categoriesCollectionPath = `/users/${userIdToFetch}/categories`; // Simplified path
+    const categoriesCollectionPath = `users/${userIdToFetch}/categories`;
     const q = query(collection(db, categoriesCollectionPath), where("monthlyBudgetId", "==", state.selectedMonthId));
 
     categoryUnsubscribe = onSnapshot(q, (snapshot) => {
