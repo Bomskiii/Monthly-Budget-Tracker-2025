@@ -1,4 +1,3 @@
-# Monthly-Budget-Tracker-2025
 # Monthly Budget Tracker
 
 This is a comprehensive budget tracking application built with HTML, CSS, and JavaScript, using Firebase for the backend.
