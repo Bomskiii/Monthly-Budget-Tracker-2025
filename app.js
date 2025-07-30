@@ -275,7 +275,7 @@ function initializeFirebase() {
         db = getFirestore(app);
         storage = getStorage(app);
         auth = getAuth(app);
-        isFirebaseInitialized = true; // Set flag to true
+        isFirebaseInitialized = true;
 
         onAuthStateChanged(auth, (user) => {
             const urlParams = new URLSearchParams(window.location.search);
