@@ -204,6 +204,7 @@ function setupEventListeners() {
         }
 
         if (target.id === 'logout-btn') {
+            cleanupListeners(); // FIX: Clean up listeners before signing out
             signOut(auth).catch(err => console.error("Logout Error:", err));
         }
 
@@ -307,6 +308,7 @@ function initializeFirebase() {
                 state.currentView = 'app';
                 setupSnapshots();
             } else {
+                cleanupListeners(); // FIX: Clean up when user is null
                 if (viewOnlyUserId) {
                     state.isEditor = false;
                     state.viewOnlyUserId = viewOnlyUserId;
@@ -331,6 +333,17 @@ function initializeFirebase() {
 let monthlyUnsubscribe = null;
 let categoryUnsubscribe = null;
 
+function cleanupListeners() {
+    if (monthlyUnsubscribe) {
+        monthlyUnsubscribe();
+        monthlyUnsubscribe = null;
+    }
+    if (categoryUnsubscribe) {
+        categoryUnsubscribe();
+        categoryUnsubscribe = null;
+    }
+}
+
 function setupSnapshots() {
     const userIdToFetch = state.viewOnlyUserId || state.user?.uid;
     if (!db || !userIdToFetch) {
@@ -339,7 +352,8 @@ function setupSnapshots() {
         return;
     }
 
-    if (monthlyUnsubscribe) monthlyUnsubscribe();
+    cleanupListeners(); // Clean up old listeners before creating new ones
+
     const monthlyCollectionPath = `users/${userIdToFetch}/monthlyBudgets`;
     monthlyUnsubscribe = onSnapshot(query(collection(db, monthlyCollectionPath)), (snapshot) => {
         state.monthlyBudgets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -415,4 +429,3 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     startApp();
 });
-
