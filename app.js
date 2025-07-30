@@ -141,6 +141,27 @@ function renderAuthView() {
     `;
 }
 
+// *** FIX: New function to render the form for adding a monthly budget ***
+function renderAddBudgetForm() {
+    return `
+        <form id="add-budget-form" class="mb-8 p-6 bg-gray-800 rounded-lg shadow-md">
+            <h2 class="text-2xl font-bold text-white mb-4">Create New Monthly Budget</h2>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label for="budget-title" class="block text-sm font-medium text-gray-300 mb-1">Budget Title</label>
+                    <input type="text" id="budget-title" name="title" placeholder="e.g., July 2024 Budget" class="w-full p-2 bg-gray-700 rounded-md text-white" required>
+                </div>
+                <div>
+                    <label for="total-budget" class="block text-sm font-medium text-gray-300 mb-1">Total Budget Amount</label>
+                    <input type="number" id="total-budget" name="totalBudget" placeholder="e.g., 5000000" class="w-full p-2 bg-gray-700 rounded-md text-white" required>
+                </div>
+            </div>
+            <button type="submit" class="mt-4 w-full p-3 bg-indigo-600 rounded-md font-semibold hover:bg-indigo-700">Create Budget</button>
+        </form>
+    `;
+}
+
+
 function renderAppView() {
     let mainContent = '';
 
@@ -157,7 +178,7 @@ function renderAppView() {
                         ${state.monthlyBudgets.map(b => `<option value="${b.id}" ${b.id === state.selectedMonthId ? 'selected' : ''}>${b.title} (${b.code}) - Created: ${formatDate(b.createdAt)}</option>`).join('')}
                     </select>
                 </div>
-                <!-- Overview, Chart, and Category content will be rendered here -->
+                <!-- TODO: Overview, Chart, and Category content will be rendered here -->
             `;
         } else {
             mainContent = `
@@ -170,20 +191,20 @@ function renderAppView() {
     }
 
     return `<div class="app-main-container">
-                <header>
-                    <h1>Monthly Budget Tracker</h1>
+                <header class="flex justify-between items-center mb-6">
+                    <h1 class="text-4xl font-extrabold">Monthly Budget Tracker</h1>
                     <div>
-                        ${state.isEditor ? `<button id="share-btn" class="btn-share">Share</button>` : ''}
+                        ${state.isEditor ? `<button id="share-btn" class="btn-share mr-2">Share</button>` : ''}
                         ${state.user ? `<button id="logout-btn" class="btn-danger">Logout</button>` : ''}
                     </div>
                 </header>
-                ${state.isEditor ? `<!-- Add Monthly Budget Form will be rendered here -->` : ''}
+                ${state.isEditor ? renderAddBudgetForm() : ''}
                 <main id="app-content">${mainContent}</main>
             </div>`;
 }
 
 function renderChartJS(budget, spent) {
-    // Chart rendering logic
+    // Chart rendering logic will go here
 }
 
 // --- EVENT HANDLERS & LOGIC ---
@@ -234,7 +255,7 @@ function setupEventListeners() {
         }
     });
 
-    appContainer.addEventListener('submit', (e) => {
+    appContainer.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!isFirebaseInitialized) {
             state.error = "Application is still initializing, please wait a moment.";
@@ -276,6 +297,31 @@ function setupEventListeners() {
                     state.error = err.message;
                     render();
                 });
+        }
+        // *** FIX: Handle the new budget form submission ***
+        else if (formId === 'add-budget-form') {
+            if (!state.user) {
+                state.error = "You must be logged in to create a budget.";
+                render();
+                return;
+            }
+            const { title, totalBudget } = data;
+            try {
+                const budgetCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                const monthlyCollectionPath = `users/${state.user.uid}/monthlyBudgets`;
+                await addDoc(collection(db, monthlyCollectionPath), {
+                    title,
+                    totalBudget: Number(totalBudget),
+                    owner: state.user.uid,
+                    code: budgetCode,
+                    createdAt: Timestamp.now()
+                });
+                e.target.reset(); // Clear the form
+            } catch (err) {
+                console.error("Error adding document: ", err);
+                state.error = "Failed to create budget.";
+                render();
+            }
         }
     });
 }
@@ -353,17 +399,20 @@ function setupSnapshots() {
     }
 
     cleanupListeners();
+    state.isLoading = true;
 
     const monthlyCollectionPath = `users/${userIdToFetch}/monthlyBudgets`;
     monthlyUnsubscribe = onSnapshot(query(collection(db, monthlyCollectionPath)), (snapshot) => {
         state.monthlyBudgets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (!state.selectedMonthId && state.monthlyBudgets.length > 0) {
-            state.selectedMonthId = state.monthlyBudgets[0].id;
-        } else if (state.monthlyBudgets.length === 0) {
-            state.selectedMonthId = '';
+        
+        // If no month is selected, or the selected one was deleted, select the first one.
+        const selectedExists = state.monthlyBudgets.some(b => b.id === state.selectedMonthId);
+        if (!state.selectedMonthId || !selectedExists) {
+            state.selectedMonthId = state.monthlyBudgets.length > 0 ? state.monthlyBudgets[0].id : '';
         }
+        
         state.isLoading = false;
-        setupCategorySnapshot();
+        setupCategorySnapshot(); // This will re-render
     }, err => {
         console.error("Error fetching monthly budgets:", err);
         state.isLoading = false;
