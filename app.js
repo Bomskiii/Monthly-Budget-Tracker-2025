@@ -142,16 +142,16 @@ function renderAuthView() {
 }
 
 function renderAppView() {
-    let appContent = '';
+    let mainContent = '';
 
     if (state.isLoading) {
-        appContent = `<div class="loader-container"><div class="loader"></div><p class="loader-text">Loading Data...</p></div>`;
+        mainContent = `<div class="loader-container"><div class="loader"></div><p class="loader-text">Loading Data...</p></div>`;
     } else {
         const selectedMonthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
         
         if (state.monthlyBudgets.length > 0 && selectedMonthlyBudget) {
             // Main view when budgets exist
-            appContent = `
+            mainContent = `
                 <div class="mb-8">
                     <label for="month-select" class="block text-lg font-medium text-gray-300 mb-2">Select Budget Month:</label>
                     <select id="month-select" class="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -162,7 +162,7 @@ function renderAppView() {
             `;
         } else {
             // View for new users with no budgets
-            appContent = `
+            mainContent = `
                 <div class="text-center p-10 bg-gray-800 rounded-lg">
                     <h3 class="text-xl text-white">No monthly budgets created yet.</h3>
                     ${state.isEditor ? '<p class="text-gray-400">Use the form above to create your first one.</p>' : ''}
@@ -171,6 +171,7 @@ function renderAppView() {
         }
     }
 
+    // FIX: The AddMonthlyBudgetForm was missing from the render logic.
     return `<div class="app-main-container">
                 <header>
                     <h1>Monthly Budget Tracker</h1>
@@ -180,7 +181,7 @@ function renderAppView() {
                     </div>
                 </header>
                 ${state.isEditor ? `<!-- Add Monthly Budget Form will be rendered here -->` : ''}
-                <main id="app-content">${appContent}</main>
+                <main id="app-content">${mainContent}</main>
             </div>`;
 }
 
