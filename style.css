@@ -171,11 +171,22 @@ input[type="date"] { color-scheme: dark; }
 .progress-bar.danger { background-color: var(--danger); }
 
 /* --- Specific Components --- */
-.stats-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1rem; }
-@media (min-width: 640px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
-.stat-card { background-color: transparent; padding: 0; }
-.stat-card .label { font-size: 0.875rem; color: var(--text-med); margin-bottom: 0.25rem; }
-.stat-card .value { font-size: clamp(1.25rem, 3vw, 1.75rem); font-weight: 600; }
+.stats-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; margin-bottom: 1rem; }
+.stat-card {
+    background-color: transparent;
+    padding: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.stat-card:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.stat-card .label { font-size: 0.875rem; color: var(--text-med); }
+.stat-card .value { font-size: 1.25rem; font-weight: 600; }
 .value.positive { color: var(--success); } .value.negative { color: var(--danger); } .value.neutral { color: var(--text-light); }
 
 .category-list { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
