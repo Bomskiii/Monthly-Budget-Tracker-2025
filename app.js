@@ -90,7 +90,10 @@ function renderAuthView() {
             <h2 class="text-3xl font-bold text-center text-white mb-6">Login</h2>
             <form id="login-form" class="space-y-4">
                 <input type="email" name="email" placeholder="Email" class="w-full p-3 bg-gray-700 rounded-md text-white" required>
-                <input type="password" name="password" placeholder="Password" class="w-full p-3 bg-gray-700 rounded-md text-white" required>
+                <div class="relative">
+                    <input type="password" name="password" placeholder="Password" class="w-full p-3 bg-gray-700 rounded-md text-white pr-10" required>
+                    <button type="button" class="absolute inset-y-0 right-0 px-3 text-gray-400" data-action="toggle-password">👁️</button>
+                </div>
                 <button type="submit" class="w-full p-3 bg-indigo-600 rounded-md font-semibold hover:bg-indigo-700">Login</button>
             </form>
             <div class="text-center mt-4">
@@ -103,7 +106,14 @@ function renderAuthView() {
             <h2 class="text-3xl font-bold text-center text-white mb-6">Register</h2>
             <form id="register-form" class="space-y-4">
                 <input type="email" name="email" placeholder="Email" class="w-full p-3 bg-gray-700 rounded-md text-white" required>
-                <input type="password" name="password" placeholder="Password (min. 6 characters)" class="w-full p-3 bg-gray-700 rounded-md text-white" required>
+                <div class="relative">
+                    <input type="password" name="password" placeholder="Password (min. 6 characters)" class="w-full p-3 bg-gray-700 rounded-md text-white pr-10" required>
+                    <button type="button" class="absolute inset-y-0 right-0 px-3 text-gray-400" data-action="toggle-password">👁️</button>
+                </div>
+                <div class="relative">
+                    <input type="password" name="confirmPassword" placeholder="Confirm Password" class="w-full p-3 bg-gray-700 rounded-md text-white pr-10" required>
+                    <button type="button" class="absolute inset-y-0 right-0 px-3 text-gray-400" data-action="toggle-password">👁️</button>
+                </div>
                 <button type="submit" class="w-full p-3 bg-indigo-600 rounded-md font-semibold hover:bg-indigo-700">Register</button>
             </form>
             <p class="text-center text-gray-400 mt-4">Already have an account? <a href="#" data-view="login" class="text-indigo-400 hover:underline">Login</a></p>
@@ -131,15 +141,12 @@ function renderAuthView() {
 }
 
 function renderAppView() {
-    const selectedMonthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
     let mainContent = '';
 
     if (state.isLoading) {
         mainContent = `<div class="loader-container"><div class="loader"></div><p class="loader-text">Loading Data...</p></div>`;
-    } else if (state.monthlyBudgets.length > 0 && selectedMonthlyBudget) {
-        mainContent = `
-            <!-- Monthly Overview, Chart, Forms, etc. -->
-        `;
+    } else if (state.monthlyBudgets.length > 0) {
+        // ... Full app content will be built here
     } else {
         mainContent = `
             <div class="text-center p-10 bg-gray-800 rounded-lg">
@@ -174,7 +181,6 @@ function setupEventListeners() {
     appContainer.addEventListener('click', (e) => {
         const target = e.target;
         
-        // Auth view switching
         if (target.matches('a[data-view]')) {
             e.preventDefault();
             state.authView = target.dataset.view;
@@ -201,6 +207,17 @@ function setupEventListeners() {
                 alert('Please select a month to share.');
             }
         }
+
+        if (target.dataset.action === 'toggle-password') {
+            const input = target.previousElementSibling;
+            if (input.type === 'password') {
+                input.type = 'text';
+                target.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                target.textContent = '👁️';
+            }
+        }
     });
 
     appContainer.addEventListener('submit', (e) => {
@@ -219,6 +236,11 @@ function setupEventListeners() {
                     render();
                 });
         } else if (formId === 'register-form') {
+            if (data.password !== data.confirmPassword) {
+                state.error = "Passwords do not match.";
+                render();
+                return;
+            }
             createUserWithEmailAndPassword(auth, data.email, data.password)
                 .catch(err => {
                     state.error = err.message;
@@ -241,13 +263,12 @@ function setupEventListeners() {
 // --- FIREBASE LOGIC ---
 
 async function initialize() {
+    if (typeof window.firebaseConfig === 'undefined') {
+        setTimeout(initialize, 100);
+        return;
+    }
+    
     try {
-        if (typeof window.firebaseConfig === 'undefined') {
-            console.log("Firebase config not found, waiting...");
-            setTimeout(initialize, 100);
-            return;
-        }
-        
         const app = initializeApp(window.firebaseConfig);
         db = getFirestore(app);
         storage = getStorage(app);
