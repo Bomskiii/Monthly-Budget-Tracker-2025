@@ -75,8 +75,7 @@ function render() {
     if (state.currentView === 'app' && state.selectedMonthId) {
         const selectedMonthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
         if (selectedMonthlyBudget) {
-            const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
-            renderChartJS(selectedMonthlyBudget, totalSpent);
+            renderChartJS(selectedMonthlyBudget);
         }
     }
 }
@@ -115,7 +114,7 @@ function renderAuthView() {
 }
 
 function renderAddOrEditBudgetForm() {
-    const isEditing = state.editingItem?.type === 'budget';
+    const isEditing = state.editingItem?.type === 'budget' && state.editingItem.id;
     const budget = isEditing ? state.monthlyBudgets.find(b => b.id === state.editingItem.id) : null;
     
     return `<form id="${isEditing ? 'edit-budget-form' : 'add-budget-form'}" class="card">
@@ -131,27 +130,32 @@ function renderAddOrEditBudgetForm() {
         </div>
         <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
             <button type="submit" class="btn btn-primary" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? 'Uploading...' : (isEditing ? 'Save Changes' : 'Create Budget')}</button>
-            ${isEditing ? `<button type="button" data-action="cancel-edit" class="btn btn-subtle">Cancel</button>` : ''}
+            <button type="button" data-action="cancel-edit" class="btn btn-subtle">Cancel</button>
         </div>
     </form>`;
 }
 
-function renderBudgetOverview(budget, spent) {
-    const remaining = budget.totalBudget - spent;
+function renderProgressBar(current, total) {
+    const percentage = total > 0 ? (current / total) * 100 : 0;
+    const displayPercentage = Math.min(percentage, 100);
+    let barClass = '';
+    if (percentage > 100) barClass = 'danger';
+    else if (percentage > 85) barClass = 'warning';
+    
+    return `<div class="progress-bar-container"><div class="progress-bar ${barClass}" style="width: ${displayPercentage}%"></div></div>`;
+}
+
+function renderBudgetOverview(budget) {
+    const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
+    const remaining = budget.totalBudget - totalSpent;
     return `
         <div style="margin-bottom: 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
-                <div>
-                    <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0;">${budget.title} <span style="font-weight: 400; color: var(--text-med);">(${budget.nomerPengajuan})</span></h3>
-                    <p style="font-size: 0.875rem; color: var(--text-med); margin: 0.25rem 0 0 0;">Created: ${formatDate(budget.creationDate)} ${budget.approvalDocUrl ? `| <a href="${budget.approvalDocUrl}" target="_blank" class="btn-link">View Approval</a>` : ''}</p>
-                </div>
-                ${state.isEditor ? `<button class="btn btn-subtle btn-sm" data-action="edit-item" data-type="budget" data-id="${budget.id}">${ICONS.edit} Edit Budget</button>` : ''}
-            </div>
             <div class="stats-grid">
                 <div class="stat-card"><div class="label">Total Budget</div><div class="value positive">${formatCurrency(budget.totalBudget)}</div></div>
-                <div class="stat-card"><div class="label">Spent</div><div class="value neutral">${formatCurrency(spent)}</div></div>
+                <div class="stat-card"><div class="label">Spent</div><div class="value neutral">${formatCurrency(totalSpent)}</div></div>
                 <div class="stat-card"><div class="label">Remaining</div><div class="value ${remaining < 0 ? 'negative' : 'positive'}">${formatCurrency(remaining)}</div></div>
             </div>
+            ${renderProgressBar(totalSpent, budget.totalBudget)}
         </div>`;
 }
 
@@ -180,6 +184,7 @@ function renderCategorySection(monthlyBudget) {
                         ${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="category" data-id="${cat.id}" title="Edit Category">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-category" data-id="${cat.id}" title="Delete Category">${ICONS.trash}</button>` : ''}
                     </div>
                 </div>
+                ${renderProgressBar(totalExpenses, cat.budget)}
                 <ul class="expense-list">
                     ${cat.expenses && cat.expenses.map(exp => {
                         const isEditingExp = state.editingItem?.type === 'expense' && state.editingItem.id === exp.id;
@@ -223,43 +228,49 @@ function renderAppView() {
         return `<div class="loader-container"><div class="loader"></div><p class="loader-text">Loading Data...</p></div>`;
     }
 
-    let mainContent = '';
     const selectedMonthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
 
-    if (state.monthlyBudgets.length > 0 && selectedMonthlyBudget) {
-        const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
+    const headerHtml = `
+        <header>
+            <div>
+                <h1>${selectedMonthlyBudget ? selectedMonthlyBudget.title : 'Budget Tracker'}</h1>
+                ${selectedMonthlyBudget ? `<p style="color: var(--text-med); margin: 0.25rem 0 0 0;">Nomer Pengajuan: ${selectedMonthlyBudget.nomerPengajuan}</p>` : ''}
+            </div>
+            <div class="header-actions">
+                ${state.isEditor ? `<button class="btn btn-primary" data-action="add-budget">${ICONS.plus} New Budget</button>` : ''}
+                ${state.isEditor ? `<button id="share-btn" class="btn btn-secondary">${ICONS.share} Share</button>` : ''}
+                ${state.user ? `<button id="logout-btn" class="btn btn-danger">Logout</button>` : ''}
+            </div>
+        </header>`;
+
+    let mainContent = '';
+    if (state.editingItem?.type === 'budget') {
+        mainContent = renderAddOrEditBudgetForm();
+    } else if (selectedMonthlyBudget) {
         mainContent = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-                <div style="flex-grow: 1;"><label for="month-select">Select Budget Month:</label><select id="month-select">${state.monthlyBudgets.map(b => `<option value="${b.id}" ${b.id === state.selectedMonthId ? 'selected' : ''}>${b.title} (${b.nomerPengajuan})</option>`).join('')}</select></div>
-                <button id="download-csv-btn" class="btn btn-success">${ICONS.download} Report (CSV)</button>
+                <div style="flex-grow: 1;"><label for="month-select">Select Budget:</label><select id="month-select">${state.monthlyBudgets.map(b => `<option value="${b.id}" ${b.id === state.selectedMonthId ? 'selected' : ''}>${b.title} (${b.nomerPengajuan})</option>`).join('')}</select></div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-subtle" data-action="edit-item" data-type="budget" data-id="${selectedMonthlyBudget.id}">${ICONS.edit} Edit Current</button>
+                    <button id="download-csv-btn" class="btn btn-success">${ICONS.download} Report</button>
+                </div>
             </div>
-            ${state.editingItem?.type === 'budget' ? '' : renderBudgetOverview(selectedMonthlyBudget, totalSpent)}
+            ${renderBudgetOverview(selectedMonthlyBudget)}
             ${renderCategorySection(selectedMonthlyBudget)}`;
     } else {
-        mainContent = `<div class="text-center p-10 card"><h3 style="font-size: 1.25rem;">No monthly budgets created yet.</h3>${state.isEditor ? '<p style="color: var(--text-med); margin-top: 0.5rem;">Use the form below to create your first one.</p>' : ''}</div>`;
+        mainContent = `<div class="text-center p-10 card"><h3 style="font-size: 1.25rem;">No monthly budgets found.</h3>${state.isEditor ? `<p style="color: var(--text-med); margin-top: 0.5rem;">Click "New Budget" to get started.</p>` : ''}</div>`;
     }
 
-    const showAddBudgetForm = state.isEditor && (state.editingItem?.type === 'budget' || state.monthlyBudgets.length === 0);
-
-    return `<div class="app-main-container">
-                <header>
-                    <h1>Monthly Budget Tracker</h1>
-                    <div class="header-actions">
-                        ${state.isEditor ? `<button id="share-btn" class="btn btn-secondary">${ICONS.share} Share</button>` : ''}
-                        ${state.user ? `<button id="logout-btn" class="btn btn-danger">Logout</button>` : ''}
-                    </div>
-                </header>
-                ${showAddBudgetForm ? renderAddOrEditBudgetForm() : ''}
-                <main id="app-content">${mainContent}</main>
-            </div>`;
+    return `<div class="app-main-container">${headerHtml}<main id="app-content">${state.error ? `<div class="notification error">${state.error}</div>` : ''}${mainContent}</main></div>`;
 }
 
-function renderChartJS(budget, spent) {
+function renderChartJS(budget) {
     const ctx = document.getElementById('budget-chart');
     if (!ctx) return;
     if (chartInstance) chartInstance.destroy();
-
-    const remaining = budget.totalBudget - spent;
+    
+    const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
+    const remaining = budget.totalBudget - totalSpent;
     const labels = state.categories.map(c => c.name);
     const data = state.categories.map(c => c.expenses ? c.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0);
     
@@ -281,8 +292,9 @@ function attachEventListeners() {
         if (!target) return;
         
         const action = target.dataset.action;
+        state.error = null; // Clear previous errors on any action
 
-        if (target.matches('a[data-view]')) { e.preventDefault(); state.authView = target.dataset.view; state.error = null; state.notification = null; render(); }
+        if (target.matches('a[data-view]')) { e.preventDefault(); state.authView = target.dataset.view; state.notification = null; render(); }
         else if (target.id === 'logout-btn') { handleLogout(); }
         else if (target.id === 'share-btn') { handleShare(); }
         else if (target.id === 'download-csv-btn') { handleDownloadCSV(); }
@@ -290,6 +302,7 @@ function attachEventListeners() {
         else if (action === 'delete-category') { handleDeleteCategory(target.closest('[data-id]').dataset.id); }
         else if (action === 'delete-expense') { handleDeleteExpense(target.closest('[data-category-id]').dataset.categoryId, target.closest('[data-expense-id]').dataset.expenseId); }
         else if (action === 'edit-item') { state.editingItem = { type: target.dataset.type, id: target.dataset.id, categoryId: target.dataset.categoryId }; render(); }
+        else if (action === 'add-budget') { state.editingItem = { type: 'budget', id: null }; render(); }
         else if (action === 'cancel-edit') { state.editingItem = null; render(); }
     };
     appContainer.onsubmit = function(e) { e.preventDefault(); handleFormSubmit(e.target); };
@@ -371,7 +384,9 @@ async function handleFormSubmit(form) {
                 if (!state.user) throw new Error("You must be logged in.");
                 const file = formData.get('approvalDoc');
                 const uploadResult = await handleFileUpload(file);
-                await addDoc(collection(db, `users/${state.user.uid}/monthlyBudgets`), { title: data.title, nomerPengajuan: data.nomerPengajuan, totalBudget: Number(data.totalBudget), owner: state.user.uid, creationDate: Timestamp.fromDate(new Date(data.creationDate)), approvalDocUrl: uploadResult?.url || null, approvalDocName: uploadResult?.name || null });
+                const newDocRef = await addDoc(collection(db, `users/${state.user.uid}/monthlyBudgets`), { title: data.title, nomerPengajuan: data.nomerPengajuan, totalBudget: Number(data.totalBudget), owner: state.user.uid, creationDate: Timestamp.fromDate(new Date(data.creationDate)), approvalDocUrl: uploadResult?.url || null, approvalDocName: uploadResult?.name || null });
+                state.selectedMonthId = newDocRef.id;
+                state.editingItem = null;
                 break;
             }
             case 'edit-budget-form': {
@@ -385,25 +400,49 @@ async function handleFormSubmit(form) {
                 state.editingItem = null;
                 break;
             }
-            case 'add-category-form':
+            case 'add-category-form': {
                 if (!state.user || !state.selectedMonthId) return;
+                const monthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
+                const currentCategoryBudgets = state.categories.reduce((sum, cat) => sum + Number(cat.budget), 0);
+                if (currentCategoryBudgets + Number(data.budget) > monthlyBudget.totalBudget) {
+                    throw new Error("Total category budgets cannot exceed the total monthly budget.");
+                }
                 await addDoc(collection(db, `users/${state.user.uid}/categories`), { name: data.name, budget: Number(data.budget), monthlyBudgetId: state.selectedMonthId, owner: state.user.uid, expenses: [] });
                 form.reset();
                 break;
+            }
             default:
                 if (form.classList.contains('add-expense-form')) {
                     const categoryId = form.dataset.categoryId;
                     if (!state.user || !categoryId) return;
+                    const monthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
+                    const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
+                    if (totalSpent + Number(data.amount) > monthlyBudget.totalBudget) {
+                        throw new Error("This expense exceeds the total monthly budget.");
+                    }
                     const file = formData.get('receipt');
                     const uploadResult = await handleFileUpload(file);
                     const newExpense = { id: Math.random().toString(36).substring(2), description: data.description, amount: Number(data.amount), date: Timestamp.fromDate(new Date(data.date)), receiptUrl: uploadResult?.url || null, receiptName: uploadResult?.name || null };
                     await updateDoc(doc(db, `users/${state.user.uid}/categories`, categoryId), { expenses: arrayUnion(newExpense) });
                     form.reset();
                 } else if (form.classList.contains('edit-category-form')) {
-                    await updateDoc(doc(db, `users/${state.user.uid}/categories`, form.dataset.id), { name: data.name, budget: Number(data.budget) });
+                    const categoryId = form.dataset.id;
+                    const monthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
+                    const otherCategoryBudgets = state.categories.filter(c => c.id !== categoryId).reduce((sum, cat) => sum + Number(cat.budget), 0);
+                    if (otherCategoryBudgets + Number(data.budget) > monthlyBudget.totalBudget) {
+                        throw new Error("Total category budgets cannot exceed the total monthly budget.");
+                    }
+                    await updateDoc(doc(db, `users/${state.user.uid}/categories`, categoryId), { name: data.name, budget: Number(data.budget) });
                     state.editingItem = null;
                 } else if (form.classList.contains('edit-expense-form')) {
                     const { categoryId, expenseId } = form.dataset;
+                    const monthlyBudget = state.monthlyBudgets.find(b => b.id === state.selectedMonthId);
+                    const currentExpense = state.categories.find(c => c.id === categoryId)?.expenses.find(e => e.id === expenseId);
+                    const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
+                    const newTotalSpent = totalSpent - (currentExpense?.amount || 0) + Number(data.amount);
+                    if (newTotalSpent > monthlyBudget.totalBudget) {
+                        throw new Error("This expense edit exceeds the total monthly budget.");
+                    }
                     const file = formData.get('receipt');
                     const uploadResult = await handleFileUpload(file);
                     const category = state.categories.find(c => c.id === categoryId);
@@ -422,7 +461,14 @@ async function handleFormSubmit(form) {
     } catch (err) { state.error = err.message; }
     finally {
         state.isUploading = false;
-        render(); // Always re-render after a form submission
+        if (!state.error) {
+            render(); 
+        } else {
+            // If there's an error, we want to show it but not clear the editing state
+            const currentEditingItem = state.editingItem;
+            render();
+            state.editingItem = currentEditingItem;
+        }
     }
 }
 
