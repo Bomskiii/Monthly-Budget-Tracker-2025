@@ -153,6 +153,7 @@ input[type="date"] { color-scheme: dark; }
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    padding-right: 1rem;
 }
 .file-input-button {
     padding: 0.25rem 0.75rem;
@@ -162,6 +163,7 @@ input[type="date"] { color-scheme: dark; }
     color: var(--text-light);
     font-size: 0.875rem;
     margin-left: 1rem;
+    flex-shrink: 0;
 }
 
 /* --- Progress Bar --- */
@@ -197,7 +199,6 @@ input[type="date"] { color-scheme: dark; }
 .category-card-content { padding: 1.5rem; }
 .category-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 1rem; }
 .category-card-header h4 { margin: 0; font-size: 1.25rem; font-weight: 600; }
-.category-card-header .actions { display: flex; gap: 0.25rem; flex-shrink: 0; }
 .category-budget-info {
     display: flex;
     flex-direction: column;
@@ -217,7 +218,7 @@ input[type="date"] { color-scheme: dark; }
     font-size: 1rem;
 }
 
-.expense-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; margin: 1.5rem 0; }
+.expense-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem; }
 .expense-item { display: flex; justify-content: space-between; align-items: center; gap: 1rem; font-size: 0.9rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); }
 .expense-item:last-child { border-bottom: none; padding-bottom: 0; }
 .expense-item .details { display: flex; flex-direction: column; }
@@ -275,4 +276,36 @@ input[type="date"] { color-scheme: dark; }
 .modal-content p {
     color: var(--text-med);
     margin-bottom: 1.5rem;
+}
+
+/* Options Menu Dropdown */
+.options-menu {
+    position: relative;
+}
+.options-dropdown {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background-color: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 0.5rem;
+    z-index: 10;
+    min-width: 120px;
+    box-shadow: var(--shadow-md);
+    display: none;
+}
+.options-dropdown.visible {
+    display: block;
+}
+.options-dropdown button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--text-light);
+}
+.options-dropdown button:hover {
+    background-color: var(--primary);
 }
