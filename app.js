@@ -7,7 +7,7 @@ import {
     sendPasswordResetEmail,
     signOut
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, query, where, Timestamp, arrayUnion, arrayRemove, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, addDoc, deleteDoc, updateDoc, onSnapshot, query, where, Timestamp, arrayUnion, arrayRemove, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- GLOBAL STATE & CONFIG ---
@@ -34,7 +34,6 @@ const state = {
     showAddCategoryForm: false, // To toggle category form
     activeOptionsMenu: null, // ID of the open options menu
     expandedCategories: [], // Array of category IDs to show all expenses
-    expenseSortConfig: {} // { categoryId: { key, direction } }
 };
 
 const CHART_COLORS = ['#58a6ff', '#9333ea', '#db2777', '#d29922', '#3fb950', '#f85149', '#8b949e'];
@@ -51,7 +50,8 @@ const ICONS = {
     receipt: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M1.5 0A1.5 1.5 0 0 0 0 1.5v13A1.5 1.5 0 0 0 1.5 16h13a1.5 1.5 0 0 0 1.5-1.5v-13A1.5 1.5 0 0 0 14.5 0h-13zM8 13a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H8z"/></svg>`,
     sortUp: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/></svg>`,
     sortDown: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/></svg>`,
-    options: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>`
+    options: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>`,
+    logout: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/></svg>`
 };
 
 // --- HELPER FUNCTIONS ---
@@ -104,7 +104,7 @@ function renderAuthView() {
             <h2>Login</h2>
             <form id="login-form">
                 <div><label for="email">Email</label><input type="email" id="email" name="email" required></div>
-                <div class="password-wrapper"><label for="password">Password</label><input type="password" id="password" name="password" required><button type="button" data-action="toggle-password">${ICONS.eye}</button></div>
+                <div class="password-wrapper"><label for="password">Password</label><input type="password" id="password" name="password" required><button type="button" data-action="toggle-password" title="Toggle password visibility">${ICONS.eye}</button></div>
                 <button type="submit" class="btn btn-primary">Login</button>
             </form>
             <div class="links"><a href="#" data-view="forgotPassword" class="btn-link">Forgot Password?</a><p>Don't have an account? <a href="#" data-view="register" class="btn-link">Register</a></p></div>`;
@@ -113,8 +113,8 @@ function renderAuthView() {
             <h2>Register</h2>
             <form id="register-form">
                 <div><label for="email">Email</label><input type="email" id="email" name="email" required></div>
-                <div class="password-wrapper"><label for="password">Password</label><input type="password" id="password" name="password" required><button type="button" data-action="toggle-password">${ICONS.eye}</button></div>
-                <div class="password-wrapper"><label for="confirmPassword">Confirm Password</label><input type="password" id="confirmPassword" name="confirmPassword" required><button type="button" data-action="toggle-password">${ICONS.eye}</button></div>
+                <div class="password-wrapper"><label for="password">Password</label><input type="password" id="password" name="password" required><button type="button" data-action="toggle-password" title="Toggle password visibility">${ICONS.eye}</button></div>
+                <div class="password-wrapper"><label for="confirmPassword">Confirm Password</label><input type="password" id="confirmPassword" name="confirmPassword" required><button type="button" data-action="toggle-password" title="Toggle password visibility">${ICONS.eye}</button></div>
                 <button type="submit" class="btn btn-primary">Register</button>
             </form>
             <div class="links"><p>Already have an account? <a href="#" data-view="login" class="btn-link">Login</a></p></div>`;
@@ -232,7 +232,7 @@ function renderCategorySection(monthlyBudget) {
                     <div class="category-card-header">
                         <h4>${cat.name}</h4>
                         <div class="actions options-menu">
-                            ${state.isEditor ? `<button class="btn btn-icon" data-action="toggle-options" data-id="cat-${cat.id}">${ICONS.options}</button>` : ''}
+                            ${state.isEditor ? `<button class="btn btn-icon" data-action="toggle-options" data-id="cat-${cat.id}" title="More options">${ICONS.options}</button>` : ''}
                             <div class="options-dropdown ${state.activeOptionsMenu === `cat-${cat.id}` ? 'visible' : ''}">
                                 <button class="btn" data-action="edit-item" data-type="category" data-id="${cat.id}">${ICONS.edit} Edit</button>
                                 <button class="btn" data-action="delete-category" data-id="${cat.id}" style="color: var(--danger);">${ICONS.trash} Delete</button>
@@ -252,7 +252,7 @@ function renderCategorySection(monthlyBudget) {
                                 return `<li style="padding: 1rem; background-color: var(--bg-med); border-radius: var(--border-radius); border: 1px solid var(--border-color);"><form class="edit-expense-form" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" placeholder="Description" required><div class="form-grid"><input type="number" name="amount" value="${exp.amount}" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(exp.date)}" min="${toInputDate(monthlyBudget.approvalDate)}" required></div><div class="custom-file-input"><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><label class="file-input-label"><span class="file-input-text">Upload receipt...</span><span class="file-input-button">Choose File</span></label></div>${exp.receiptUrl ? `<div style="margin-top: 0.25rem; font-size: 0.75rem;">Current: <a href="${exp.receiptUrl}" target="_blank" class="btn-link">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="btn btn-sm">Cancel</button></div></form></li>`;
                             }
                             return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${cat.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-expense" data-category-id="${cat.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
-                        }).join('') || `<li class="text-sm text-gray-400">No expenses added yet.</li>`}
+                        }).join('') || `<li class="no-expense-message">No expenses added yet.</li>`}
                     </ul>
                     ${(cat.expenses || []).length > 5 ? `<button class="btn btn-sm" data-action="toggle-expand-category" data-id="${cat.id}">${isExpanded ? 'Show Less' : `Show All ${cat.expenses.length} Expenses`}</button>` : ''}
                     ${state.isEditor ? (state.showAddExpenseFormFor === cat.id ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" min="${toInputDate(monthlyBudget.approvalDate)}" required></div><div class="custom-file-input"><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><label class="file-input-label"><span class="file-input-text">Upload receipt...</span><span class="file-input-button">Choose File</span></label></div><div style="display:flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-sm btn-primary" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add'}</button><button type="button" class="btn btn-sm" data-action="toggle-add-expense" data-id="">Cancel</button></div></form>` : `<button class="btn btn-sm" data-action="toggle-add-expense" data-id="${cat.id}">${ICONS.plus} Add Expense</button>`) : ''}
@@ -271,7 +271,7 @@ function renderCategorySection(monthlyBudget) {
                     <button class="btn" data-action="sort" data-key="used" title="Sort by Used Amount">Used ${state.sortConfig.key === 'used' ? (state.sortConfig.direction === 'asc' ? ICONS.sortUp : ICONS.sortDown) : ''}</button>
                 </div>
             </div>
-            ${state.isEditor ? (state.showAddCategoryForm ? `<form id="add-category-form" class="card" style="margin-bottom: 1.5rem;"><div class="form-grid"><input type="text" name="name" placeholder="New category name" required><input type="number" name="budget" placeholder="Budget" required></div><div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary">${ICONS.plus} Add Category</button><button type="button" class="btn" data-action="toggle-add-category">Cancel</button></div></form>` : `<button class="btn btn-primary" style="width: 100%; margin-bottom: 1.5rem;" data-action="toggle-add-category">${ICONS.plus} Add Category</button>`) : ''}
+            ${state.isEditor ? (state.showAddCategoryForm ? `<form id="add-category-form" class="card" style="margin-bottom: 1.5rem;"><div class="form-grid"><input type="text" name="name" placeholder="New category name" required><input type="number" name="budget" placeholder="Budget" required></div><div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary">${ICONS.plus} Add Category</button><button type="button" class="btn" data-action="toggle-add-category">Cancel</button></div></form>` : `<button class="btn btn-primary" style="width: 100%; margin-bottom: 1.5rem;" data-action="toggle-add-category">${ICONS.plus} Add New Category</button>`) : ''}
             <div class="category-list">${categoryListHtml}</div>
         </div>`;
 }
@@ -305,7 +305,7 @@ function renderCategoryDetailView(category, monthlyBudget) {
             <ul class="expense-list">
                 ${category.expenses && category.expenses.length > 0 ? category.expenses.map(exp => {
                      return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${category.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-expense" data-category-id="${category.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
-                }).join('') : `<li class="text-sm text-gray-400">No expenses added yet.</li>`}
+                }).join('') : `<li class="no-expense-message">No expenses added yet.</li>`}
             </ul>
         </div>
     `;
@@ -325,9 +325,9 @@ function renderAppView() {
                 ${selectedMonthlyBudget ? `<p class="page-subtitle">Nomer Pengajuan: ${selectedMonthlyBudget.nomerPengajuan} | Approved: ${formatDate(selectedMonthlyBudget.approvalDate)}</p>` : ''}
             </div>
             <div class="header-actions">
-                ${state.isEditor ? `<button class="btn btn-primary" data-action="add-budget">${ICONS.plus} New Budget</button>` : ''}
-                ${state.isEditor && selectedMonthlyBudget ? `<button id="share-btn" class="btn">${ICONS.share} Share</button>` : ''}
-                ${state.user ? `<button id="logout-btn" class="btn btn-danger">Logout</button>` : ''}
+                ${state.isEditor ? `<button class="btn btn-primary btn-icon" data-action="add-budget" title="Create New Budget">${ICONS.plus}</button>` : ''}
+                ${state.isEditor && selectedMonthlyBudget ? `<button id="share-btn" class="btn btn-icon" title="Share View-Only Link">${ICONS.share}</button>` : ''}
+                ${state.user ? `<button id="logout-btn" class="btn btn-danger btn-icon" title="Logout">${ICONS.logout}</button>` : ''}
             </div>
         </header>`;
 
@@ -344,14 +344,14 @@ function renderAppView() {
                     <div style="flex-grow: 1;"><label for="month-select">Select Budget:</label><select id="month-select">${state.monthlyBudgets.map(b => `<option value="${b.id}" ${b.id === state.selectedMonthId ? 'selected' : ''}>${b.title} (${b.nomerPengajuan})</option>`).join('')}</select></div>
                     <div style="display: flex; gap: 0.5rem;">
                         <button class="btn btn-icon" data-action="edit-item" data-type="budget" data-id="${selectedMonthlyBudget.id}" title="Edit Current Budget">${ICONS.edit}</button>
-                        <button id="download-csv-btn" class="btn btn-icon" title="Download Report">${ICONS.download}</button>
+                        <button id="download-csv-btn" class="btn btn-icon" title="Download Report as CSV">${ICONS.download}</button>
                     </div>
                 </div>
                 ${renderDashboard(selectedMonthlyBudget)}
                 ${renderCategorySection(selectedMonthlyBudget)}`;
         }
     } else {
-        mainContent = `<div class="text-center p-10 card"><h3 style="font-size: 1.25rem;">No monthly budgets found.</h3>${state.isEditor ? `<p style="color: var(--text-med); margin-top: 0.5rem;">Click "New Budget" to get started.</p>` : ''}</div>`;
+        mainContent = `<div class="no-budget-message card"><h3 style="font-size: 1.25rem;">No monthly budgets found.</h3>${state.isEditor ? `<p style="color: var(--text-med); margin-top: 0.5rem;">Click the "+" icon to get started.</p>` : ''}</div>`;
     }
 
     return `<div class="app-main-container">${headerHtml}<main id="app-content">${mainContent}</main></div>`;
@@ -396,19 +396,30 @@ function renderExpenseChart(category) {
     expenseChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ label: 'Amount', data: data, backgroundColor: CHART_COLORS, borderColor: '#161b22', borderWidth: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => `${context.label || ''}: ${formatCurrency(context.parsed)}` } } } } });
 }
 
-function showModal(title, message) {
-    const existingModal = document.getElementById('error-modal');
+function showModal(title, message, isConfirmation = false, onConfirm = () => {}) {
+    const existingModal = document.getElementById('alert-modal');
     if (existingModal) existingModal.remove();
 
     const modalHtml = `
-        <div class="modal-overlay visible" id="error-modal" data-action="close-modal">
+        <div class="modal-overlay visible" id="alert-modal">
             <div class="modal-content">
                 <h3>${title}</h3>
                 <p>${message}</p>
-                <button class="btn btn-primary" data-action="close-modal">OK</button>
+                <div class="modal-actions">
+                    ${isConfirmation ? `<button class="btn" data-action="close-modal">Cancel</button><button class="btn btn-danger" data-action="confirm-modal">Confirm</button>` : `<button class="btn btn-primary" data-action="close-modal">OK</button>`}
+                </div>
             </div>
         </div>`;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    const modal = document.getElementById('alert-modal');
+    modal.querySelector('[data-action="close-modal"]').onclick = () => modal.remove();
+    if (isConfirmation) {
+        modal.querySelector('[data-action="confirm-modal"]').onclick = () => {
+            modal.remove();
+            onConfirm();
+        };
+    }
 }
 
 // --- EVENT HANDLERS & LOGIC ---
@@ -467,12 +478,7 @@ function attachEventListeners() {
             render();
         }
     };
-    document.body.onclick = function(e) {
-        if (e.target.closest('[data-action="close-modal"]')) {
-            const modal = document.getElementById('error-modal');
-            if (modal) modal.remove();
-        }
-    }
+
     appContainer.onsubmit = function(e) { e.preventDefault(); handleFormSubmit(e.target); };
     appContainer.onchange = function(e) {
         if (e.target.id === 'month-select') { state.selectedMonthId = e.target.value; state.selectedCategoryId = null; setupCategorySnapshot(); }
@@ -482,7 +488,7 @@ function attachEventListeners() {
             if (file && label) {
                 label.textContent = file.name;
             } else if (label) {
-                label.textContent = 'Upload proof of receipt here...';
+                label.textContent = 'Upload file...';
             }
         }
     };
@@ -491,9 +497,19 @@ function attachEventListeners() {
 function handleLogout() { cleanupListeners(); signOut(auth).catch(err => console.error("Logout Error:", err)); }
 function handleShare() {
     if (state.selectedMonthId) {
-        const shareUrl = `${window.location.origin}${window.location.pathname}?userId=${state.user.uid}&monthId=${state.selectedMonthId}`;
-        navigator.clipboard.writeText(shareUrl).then(() => alert('View-only link copied to clipboard!')).catch(err => { console.error('Failed to copy: ', err); prompt("Copy this link:", shareUrl); });
-    } else { alert('Please select a month to share.'); }
+        const userIdToShare = state.user?.uid;
+        if (!userIdToShare) {
+            showModal("Error", "You must be logged in to share a budget.");
+            return;
+        }
+        const shareUrl = `${window.location.origin}${window.location.pathname}?userId=${userIdToShare}&monthId=${state.selectedMonthId}`;
+        navigator.clipboard.writeText(shareUrl)
+            .then(() => showModal("Link Copied", "A view-only link has been copied to your clipboard."))
+            .catch(err => { 
+                console.error('Failed to copy: ', err); 
+                window.prompt("Copy this link:", shareUrl);
+            });
+    } else { showModal('Error', 'Please select a month to share.'); }
 }
 function togglePasswordVisibility(button) { 
     const wrapper = button.closest('.password-wrapper');
@@ -507,7 +523,19 @@ function togglePasswordVisibility(button) {
     } 
 }
 
-async function handleFileUpload(file) {
+async function handleFileUpload(file, oldFileUrl = null) {
+    if (oldFileUrl) {
+        try {
+            const oldFileRef = ref(storage, oldFileUrl);
+            await deleteObject(oldFileRef);
+        } catch (e) {
+            // Ignore errors if the old file doesn't exist, but log others
+            if (e.code !== 'storage/object-not-found') {
+                console.error("Could not delete old file from storage:", e);
+            }
+        }
+    }
+    
     if (!file || file.size === 0) return null;
     if (file.size > 5 * 1024 * 1024) throw new Error("File size cannot exceed 5MB.");
     const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
@@ -518,42 +546,53 @@ async function handleFileUpload(file) {
     const storageRef = ref(storage, `uploads/${state.user.uid}/${Date.now()}-${file.name}`);
     const snapshot = await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(snapshot.ref);
-    state.isUploading = false;
     return { url: downloadURL, name: file.name };
 }
 
-async function handleDeleteBudget(budgetId) {
-    if (confirm('Are you sure you want to delete this entire budget, including all its categories and expenses? This action cannot be undone.')) {
+function handleDeleteBudget(budgetId) {
+    showModal('Confirm Deletion', 'Are you sure you want to delete this entire budget, including all its categories and expenses? This action cannot be undone.', true, async () => {
         try {
             await deleteDoc(doc(db, `users/${state.user.uid}/monthlyBudgets`, budgetId));
             state.editingItem = null;
-            // The onSnapshot listener will automatically handle re-rendering and selecting the new latest budget.
+            // The onSnapshot listener will automatically handle re-rendering.
         } catch (err) {
+            console.error("Delete Budget Error:", err);
             showModal("Error", "Failed to delete budget.");
         }
-    }
+    });
 }
 
-async function handleDeleteCategory(categoryId) {
-    if (confirm('Are you sure you want to delete this category and all its expenses?')) {
-        const docRef = doc(db, `users/${state.user.uid}/categories`, categoryId);
-        await deleteDoc(docRef);
-    }
+function handleDeleteCategory(categoryId) {
+    showModal('Confirm Deletion', 'Are you sure you want to delete this category and all its expenses?', true, async () => {
+        try {
+            const docRef = doc(db, `users/${state.user.uid}/categories`, categoryId);
+            await deleteDoc(docRef);
+        } catch (err) {
+            console.error("Delete Category Error:", err);
+            showModal("Error", "Failed to delete category.");
+        }
+    });
 }
-async function handleDeleteExpense(categoryId, expenseId) {
-    if (confirm('Are you sure you want to delete this expense?')) {
+
+function handleDeleteExpense(categoryId, expenseId) {
+    showModal('Confirm Deletion', 'Are you sure you want to delete this expense?', true, async () => {
         const category = state.categories.find(c => c.id === categoryId);
         if (category) {
             const expenseToDelete = category.expenses.find(e => e.id === expenseId);
             if (expenseToDelete) {
-                if (expenseToDelete.receiptUrl) {
-                    try { await deleteObject(ref(storage, expenseToDelete.receiptUrl)); } catch (e) { console.error("Could not delete old receipt from storage:", e); }
+                try {
+                    if (expenseToDelete.receiptUrl) {
+                       await deleteObject(ref(storage, expenseToDelete.receiptUrl));
+                    }
+                    const docRef = doc(db, `users/${state.user.uid}/categories`, categoryId);
+                    await updateDoc(docRef, { expenses: arrayRemove(expenseToDelete) });
+                } catch(err) {
+                    console.error("Delete Expense Error:", err);
+                    showModal("Error", "Failed to delete expense.");
                 }
-                const docRef = doc(db, `users/${state.user.uid}/categories`, categoryId);
-                await updateDoc(docRef, { expenses: arrayRemove(expenseToDelete) });
             }
         }
-    }
+    });
 }
 
 async function handleFormSubmit(form) {
@@ -566,7 +605,7 @@ async function handleFormSubmit(form) {
         switch (form.id) {
             case 'login-form': await signInWithEmailAndPassword(auth, data.email, data.password); break;
             case 'register-form': if (data.password !== data.confirmPassword) throw new Error("Passwords do not match."); await createUserWithEmailAndPassword(auth, data.email, data.password); break;
-            case 'forgot-password-form': await sendPasswordResetEmail(auth, data.email); alert('Password reset email sent!'); break;
+            case 'forgot-password-form': await sendPasswordResetEmail(auth, data.email); showModal('Success', 'Password reset email sent!'); break;
             case 'add-budget-form': {
                 if (!state.user) throw new Error("You must be logged in.");
                 const file = formData.get('approvalDoc');
@@ -579,7 +618,8 @@ async function handleFormSubmit(form) {
             case 'edit-budget-form': {
                 if (!state.user || !state.editingItem) throw new Error("Editing error.");
                 const file = formData.get('approvalDoc');
-                const uploadResult = await handleFileUpload(file);
+                const budgetDoc = state.monthlyBudgets.find(b => b.id === state.editingItem.id);
+                const uploadResult = await handleFileUpload(file, budgetDoc?.approvalDocUrl);
                 const docRef = doc(db, `users/${state.user.uid}/monthlyBudgets`, state.editingItem.id);
                 const updateData = { title: data.title, nomerPengajuan: data.nomerPengajuan, totalBudget: Number(data.totalBudget), approvalDate: Timestamp.fromDate(new Date(data.approvalDate)) };
                 if (uploadResult) { updateData.approvalDocUrl = uploadResult.url; updateData.approvalDocName = uploadResult.name; }
@@ -632,15 +672,15 @@ async function handleFormSubmit(form) {
                     if (new Date(data.date) < monthlyBudget.approvalDate.toDate()) {
                         throw new Error("Expense date cannot be before the budget's approval date.");
                     }
-                    const currentExpense = state.categories.find(c => c.id === categoryId)?.expenses.find(e => e.id === expenseId);
-                    const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
+                    const category = state.categories.find(c => c.id === categoryId);
+                    const currentExpense = category?.expenses.find(e => e.id === expenseId);
+                    const totalSpent = state.categories.reduce((total, cat) => total + (cat.expenses ? cat.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
                     const newTotalSpent = totalSpent - (currentExpense?.amount || 0) + Number(data.amount);
                     if (newTotalSpent > monthlyBudget.totalBudget) {
                         throw new Error("This expense edit exceeds the total monthly budget.");
                     }
                     const file = formData.get('receipt');
-                    const uploadResult = await handleFileUpload(file);
-                    const category = state.categories.find(c => c.id === categoryId);
+                    const uploadResult = await handleFileUpload(file, currentExpense?.receiptUrl);
                     const newExpenses = category.expenses.map(exp => {
                         if (exp.id === expenseId) {
                             const updatedExp = { ...exp, description: data.description, amount: Number(data.amount), date: Timestamp.fromDate(new Date(data.date)) };
@@ -658,6 +698,7 @@ async function handleFormSubmit(form) {
         state.isUploading = false;
         if (error) {
             showModal('Error', error);
+            render(); // Re-render to reset button state
         } else {
             render(); 
         }
@@ -678,7 +719,7 @@ function handleDownloadCSV() {
     csvContent += "Category,Expense,Amount,Date,Receipt\n";
 
     state.categories.forEach(cat => {
-        if (cat.expenses.length === 0) {
+        if (!cat.expenses || cat.expenses.length === 0) {
             csvContent += `"${cat.name}",(No expenses yet),0,,\n`;
         } else {
             cat.expenses.forEach(exp => {
@@ -704,32 +745,38 @@ function initializeFirebase() {
         auth = getAuth(app);
         storage = getStorage(app);
         isFirebaseInitialized = true;
+        
         onAuthStateChanged(auth, (user) => {
             const urlParams = new URLSearchParams(window.location.search);
             const viewOnlyUserId = urlParams.get('userId');
             const viewOnlyMonthId = urlParams.get('monthId');
+            
             state.user = user;
+
             if (user) {
+                // Logged-in user
                 state.isEditor = !(viewOnlyUserId && user.uid !== viewOnlyUserId);
                 state.viewOnlyUserId = viewOnlyUserId && !state.isEditor ? viewOnlyUserId : null;
                 state.selectedMonthId = viewOnlyMonthId || state.selectedMonthId;
                 state.currentView = 'app';
                 setupSnapshots();
-            } else {
+            } else if (viewOnlyUserId && viewOnlyMonthId) {
+                // Not logged in, but has a valid share link
                 cleanupListeners();
-                if (viewOnlyUserId) {
-                    state.isEditor = false;
-                    state.viewOnlyUserId = viewOnlyUserId;
-                    state.selectedMonthId = viewOnlyMonthId;
-                    state.currentView = 'app';
-                    setupSnapshots();
-                } else {
-                    state.currentView = 'auth';
-                    state.isLoading = false;
-                    render();
-                }
+                state.isEditor = false;
+                state.viewOnlyUserId = viewOnlyUserId;
+                state.selectedMonthId = viewOnlyMonthId;
+                state.currentView = 'app';
+                setupSnapshots();
+            } else {
+                // Not logged in, no share link
+                cleanupListeners();
+                state.currentView = 'auth';
+                state.isLoading = false;
+                render();
             }
         });
+
     } catch (e) { console.error("Firebase initialization error:", e); showModal("Initialization Error", "Failed to initialize the application."); }
 }
 
@@ -778,7 +825,8 @@ function setupCategorySnapshot() {
     const categoriesCollectionPath = `users/${userIdToFetch}/categories`;
     const q = query(collection(db, categoriesCollectionPath), where("monthlyBudgetId", "==", state.selectedMonthId));
     categoryUnsubscribe = onSnapshot(q, (snapshot) => {
-        state.categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), expenses: doc.data().expenses || [] }));
+        const expenses = (doc) => (doc.data().expenses || []).map(e => ({ ...e, date: e.date?.toDate ? e.date : Timestamp.fromDate(new Date()) }));
+        state.categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), expenses: expenses(doc) }));
         render();
     }, err => { console.error("Error fetching categories:", err); render(); });
 }
