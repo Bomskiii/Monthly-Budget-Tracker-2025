@@ -34,6 +34,7 @@ const state = {
     showAddCategoryForm: false, // To toggle category form
     activeOptionsMenu: null, // ID of the open options menu
     expandedCategories: [], // Array of category IDs to show all expenses
+    expenseSortConfig: {} // { categoryId: { key, direction } }
 };
 
 const CHART_COLORS = ['#58a6ff', '#9333ea', '#db2777', '#d29922', '#3fb950', '#f85149', '#8b949e'];
@@ -51,7 +52,8 @@ const ICONS = {
     sortUp: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/></svg>`,
     sortDown: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/></svg>`,
     options: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>`,
-    logout: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/></svg>`
+    logout: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/></svg>`,
+    list: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`
 };
 
 // --- HELPER FUNCTIONS ---
@@ -194,35 +196,45 @@ function renderDashboard(budget) {
         </div>`;
 }
 
-function renderCategorySection(monthlyBudget) {
+function renderCategorySection() {
     const sortedCategories = [...state.categories].sort((a, b) => {
         const key = state.sortConfig.key;
         const dir = state.sortConfig.direction === 'asc' ? 1 : -1;
-        if (key === 'name') {
-            return a.name.localeCompare(b.name) * dir;
-        }
+        if (key === 'name') return a.name.localeCompare(b.name) * dir;
         if (key === 'used') {
-             const usedA = a.expenses ? a.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
-             const usedB = b.expenses ? b.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
+             const usedA = a.expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
+             const usedB = b.expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
              return (usedA - usedB) * dir;
         }
         return (a.budget - b.budget) * dir;
     });
 
-    const categoryListHtml = sortedCategories.map((cat, index) => {
+    const categoryListHtml = sortedCategories.map((cat) => {
         const isEditingCat = state.editingItem?.type === 'category' && state.editingItem.id === cat.id;
         if (isEditingCat) {
             return `<form class="edit-category-form card" data-id="${cat.id}"><h4 style="font-size: 1.125rem; font-weight: 700; margin:0 0 1rem 0;">Edit Category</h4><div class="form-grid"><input type="text" name="name" value="${cat.name}" required><input type="number" name="budget" value="${cat.budget || ''}" placeholder="Category Budget" required></div><div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm">Save</button><button type="button" data-action="cancel-edit" class="btn btn-sm">Cancel</button></div></form>`;
         }
 
-        const totalExpenses = cat.expenses ? cat.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
+        const totalExpenses = cat.expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
         const remaining = cat.budget - totalExpenses;
-        const color = CHART_COLORS[index % CHART_COLORS.length];
+        
+        // Find the original index to maintain color consistency with the chart
+        const originalIndex = state.categories.findIndex(c => c.id === cat.id);
+        const color = CHART_COLORS[originalIndex % CHART_COLORS.length];
+
         const isExpanded = state.expandedCategories.includes(cat.id);
         
-        let expensesToRender = cat.expenses || [];
+        // Sort expenses for this category
+        const sortConf = state.expenseSortConfig[cat.id] || { key: 'date', direction: 'desc' };
+        const sortedExpenses = [...(cat.expenses || [])].sort((a, b) => {
+            const dir = sortConf.direction === 'asc' ? 1 : -1;
+            if (sortConf.key === 'amount') return (a.amount - b.amount) * dir;
+            return (b.date.toDate() - a.date.toDate()) * dir; // Default to date descending
+        });
+
+        let expensesToRender = sortedExpenses;
         if (!isExpanded && expensesToRender.length > 5) {
-            expensesToRender = [...expensesToRender].sort((a,b) => b.date.toDate() - a.date.toDate()).slice(0, 5);
+            expensesToRender = expensesToRender.slice(0, 5);
         }
 
         return `
@@ -245,17 +257,37 @@ function renderCategorySection(monthlyBudget) {
                         <div class="info-row">${remaining < 0 ? `<span>Over Budget</span><span class="value negative">${formatCurrency(Math.abs(remaining))}</span>` : `<span>Remaining</span><span class="value positive">${formatCurrency(remaining)}</span>`}</div>
                     </div>
                     ${renderProgressBar(totalExpenses, cat.budget)}
+                    
+                    <div class="expense-list-header">
+                        <h5>Expenses</h5>
+                        <div class="expense-sort-controls">
+                            <button class="btn btn-icon btn-sm" data-action="sort-expense" data-category-id="${cat.id}" data-key="date" title="Sort by Date">${ICONS.sortDown}</button>
+                            <button class="btn btn-icon btn-sm" data-action="sort-expense" data-category-id="${cat.id}" data-key="amount" title="Sort by Amount">${ICONS.sortUp}</button>
+                        </div>
+                    </div>
                     <ul class="expense-list">
                         ${expensesToRender.map(exp => {
                             const isEditingExp = state.editingItem?.type === 'expense' && state.editingItem.id === exp.id;
                             if (isEditingExp) {
-                                return `<li style="padding: 1rem; background-color: var(--bg-med); border-radius: var(--border-radius); border: 1px solid var(--border-color);"><form class="edit-expense-form" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" placeholder="Description" required><div class="form-grid"><input type="number" name="amount" value="${exp.amount}" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(exp.date)}" min="${toInputDate(monthlyBudget.approvalDate)}" required></div><div class="custom-file-input"><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><label class="file-input-label"><span class="file-input-text">Upload receipt...</span><span class="file-input-button">Choose File</span></label></div>${exp.receiptUrl ? `<div style="margin-top: 0.25rem; font-size: 0.75rem;">Current: <a href="${exp.receiptUrl}" target="_blank" class="btn-link">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="btn btn-sm">Cancel</button></div></form></li>`;
+                                return `<li class="expense-form-container"><form class="edit-expense-form" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" placeholder="Description" required><div class="form-grid"><input type="number" name="amount" value="${exp.amount}" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(exp.date)}" required></div><div class="custom-file-input"><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><label class="file-input-label"><span class="file-input-text">Upload receipt...</span><span class="file-input-button">Choose File</span></label></div>${exp.receiptUrl ? `<div style="margin-top: 0.25rem; font-size: 0.75rem;">Current: <a href="${exp.receiptUrl}" target="_blank" class="btn-link">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="btn btn-sm">Cancel</button></div></form></li>`;
                             }
-                            return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${cat.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-expense" data-category-id="${cat.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
+                            return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}
+                                ${state.isEditor ? `
+                                <div class="options-menu">
+                                    <button class="btn btn-icon" data-action="toggle-options" data-id="exp-${exp.id}" title="More options">${ICONS.options}</button>
+                                    <div class="options-dropdown ${state.activeOptionsMenu === `exp-${exp.id}` ? 'visible' : ''}">
+                                        <button class="btn" data-action="edit-item" data-type="expense" data-category-id="${cat.id}" data-id="${exp.id}">${ICONS.edit} Edit</button>
+                                        <button class="btn" data-action="delete-expense" data-category-id="${cat.id}" data-expense-id="${exp.id}" style="color: var(--danger);">${ICONS.trash} Delete</button>
+                                    </div>
+                                </div>` : ''}
+                            </div></li>`;
                         }).join('') || `<li class="no-expense-message">No expenses added yet.</li>`}
                     </ul>
-                    ${(cat.expenses || []).length > 5 ? `<button class="btn btn-sm" data-action="toggle-expand-category" data-id="${cat.id}">${isExpanded ? 'Show Less' : `Show All ${cat.expenses.length} Expenses`}</button>` : ''}
-                    ${state.isEditor ? (state.showAddExpenseFormFor === cat.id ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" min="${toInputDate(monthlyBudget.approvalDate)}" required></div><div class="custom-file-input"><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><label class="file-input-label"><span class="file-input-text">Upload receipt...</span><span class="file-input-button">Choose File</span></label></div><div style="display:flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-sm btn-primary" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add'}</button><button type="button" class="btn btn-sm" data-action="toggle-add-expense" data-id="">Cancel</button></div></form>` : `<button class="btn btn-sm" data-action="toggle-add-expense" data-id="${cat.id}">${ICONS.plus} Add Expense</button>`) : ''}
+
+                    <div class="category-card-footer">
+                        ${state.isEditor ? (state.showAddExpenseFormFor === cat.id ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" required></div><div class="custom-file-input"><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><label class="file-input-label"><span class="file-input-text">Upload receipt...</span><span class="file-input-button">Choose File</span></label></div><div style="display:flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-sm btn-primary" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add'}</button><button type="button" class="btn btn-sm" data-action="toggle-add-expense" data-id="">Cancel</button></div></form>` : `<button class="btn btn-sm" data-action="toggle-add-expense" data-id="${cat.id}">${ICONS.plus} Add Expense</button>`) : ''}
+                        ${(cat.expenses || []).length > 5 ? `<button class="btn btn-icon btn-sm" data-action="toggle-expand-category" data-id="${cat.id}" title="${isExpanded ? 'Show Less' : `Show All ${cat.expenses.length} Expenses`}">${ICONS.list}</button>` : ''}
+                    </div>
                 </div>
             </div>`;
     }).join('');
@@ -276,8 +308,8 @@ function renderCategorySection(monthlyBudget) {
         </div>`;
 }
 
-function renderCategoryDetailView(category, monthlyBudget) {
-    const totalExpenses = category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
+function renderCategoryDetailView(category) {
+    const totalExpenses = category.expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
     const remaining = category.budget - totalExpenses;
     const overBudgetHtml = `<span class="value negative">Over Budget by ${formatCurrency(Math.abs(remaining))}</span>`;
 
@@ -348,7 +380,7 @@ function renderAppView() {
                     </div>
                 </div>
                 ${renderDashboard(selectedMonthlyBudget)}
-                ${renderCategorySection(selectedMonthlyBudget)}`;
+                ${renderCategorySection()}`;
         }
     } else {
         mainContent = `<div class="no-budget-message card"><h3 style="font-size: 1.25rem;">No monthly budgets found.</h3>${state.isEditor ? `<p style="color: var(--text-med); margin-top: 0.5rem;">Click the "+" icon to get started.</p>` : ''}</div>`;
@@ -361,11 +393,24 @@ function renderMonthlyChart(budget) {
     const ctx = document.getElementById('monthly-chart');
     if (!ctx) return;
     if (monthlyChartInstance) monthlyChartInstance.destroy();
+
+    // Apply the same sorting as the category list to ensure color consistency
+    const sortedCategories = [...state.categories].sort((a, b) => {
+        const key = state.sortConfig.key;
+        const dir = state.sortConfig.direction === 'asc' ? 1 : -1;
+        if (key === 'name') return a.name.localeCompare(b.name) * dir;
+        if (key === 'used') {
+             const usedA = a.expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
+             const usedB = b.expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
+             return (usedA - usedB) * dir;
+        }
+        return (a.budget - b.budget) * dir;
+    });
     
-    const totalSpent = state.categories.reduce((total, category) => total + (category.expenses ? category.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0), 0);
+    const totalSpent = sortedCategories.reduce((total, category) => total + (category.expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0), 0);
     const remaining = budget.totalBudget - totalSpent;
-    const labels = state.categories.map(c => c.name);
-    const data = state.categories.map(c => c.expenses ? c.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0);
+    const labels = sortedCategories.map(c => c.name);
+    const data = sortedCategories.map(c => c.expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0);
     
     if (remaining > 0) {
         labels.push('Remaining');
@@ -477,6 +522,18 @@ function attachEventListeners() {
             }
             render();
         }
+        else if (action === 'sort-expense') {
+            const { categoryId, key } = target.dataset;
+            const currentSort = state.expenseSortConfig[categoryId] || { key: 'date', direction: 'desc' };
+            if (currentSort.key === key) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.key = key;
+                currentSort.direction = 'desc';
+            }
+            state.expenseSortConfig[categoryId] = currentSort;
+            render();
+        }
     };
 
     appContainer.onsubmit = function(e) { e.preventDefault(); handleFormSubmit(e.target); };
@@ -529,7 +586,6 @@ async function handleFileUpload(file, oldFileUrl = null) {
             const oldFileRef = ref(storage, oldFileUrl);
             await deleteObject(oldFileRef);
         } catch (e) {
-            // Ignore errors if the old file doesn't exist, but log others
             if (e.code !== 'storage/object-not-found') {
                 console.error("Could not delete old file from storage:", e);
             }
@@ -554,7 +610,6 @@ function handleDeleteBudget(budgetId) {
         try {
             await deleteDoc(doc(db, `users/${state.user.uid}/monthlyBudgets`, budgetId));
             state.editingItem = null;
-            // The onSnapshot listener will automatically handle re-rendering.
         } catch (err) {
             console.error("Delete Budget Error:", err);
             showModal("Error", "Failed to delete budget.");
@@ -698,7 +753,7 @@ async function handleFormSubmit(form) {
         state.isUploading = false;
         if (error) {
             showModal('Error', error);
-            render(); // Re-render to reset button state
+            render();
         } else {
             render(); 
         }
@@ -754,14 +809,12 @@ function initializeFirebase() {
             state.user = user;
 
             if (user) {
-                // Logged-in user
                 state.isEditor = !(viewOnlyUserId && user.uid !== viewOnlyUserId);
                 state.viewOnlyUserId = viewOnlyUserId && !state.isEditor ? viewOnlyUserId : null;
                 state.selectedMonthId = viewOnlyMonthId || state.selectedMonthId;
                 state.currentView = 'app';
                 setupSnapshots();
             } else if (viewOnlyUserId && viewOnlyMonthId) {
-                // Not logged in, but has a valid share link
                 cleanupListeners();
                 state.isEditor = false;
                 state.viewOnlyUserId = viewOnlyUserId;
@@ -769,7 +822,6 @@ function initializeFirebase() {
                 state.currentView = 'app';
                 setupSnapshots();
             } else {
-                // Not logged in, no share link
                 cleanupListeners();
                 state.currentView = 'auth';
                 state.isLoading = false;
