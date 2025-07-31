@@ -30,7 +30,11 @@ const state = {
     editingItem: null, // { type, id, ... }
     sortConfig: { key: 'name', direction: 'asc' },
     isUploading: false,
-    showAddExpenseFormFor: null // ID of category to show form for
+    showAddExpenseFormFor: null, // ID of category to show form for
+    showAddCategoryForm: false, // To toggle category form
+    activeOptionsMenu: null, // ID of the open options menu
+    expandedCategories: [], // Array of category IDs to show all expenses
+    expenseSortConfig: {} // { categoryId: { key, direction } }
 };
 
 const CHART_COLORS = ['#58a6ff', '#9333ea', '#db2777', '#d29922', '#3fb950', '#f85149', '#8b949e'];
@@ -47,6 +51,7 @@ const ICONS = {
     receipt: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M1.5 0A1.5 1.5 0 0 0 0 1.5v13A1.5 1.5 0 0 0 1.5 16h13a1.5 1.5 0 0 0 1.5-1.5v-13A1.5 1.5 0 0 0 14.5 0h-13zM8 13a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H8z"/></svg>`,
     sortUp: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/></svg>`,
     sortDown: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/></svg>`,
+    options: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>`
 };
 
 // --- HELPER FUNCTIONS ---
@@ -213,6 +218,12 @@ function renderCategorySection(monthlyBudget) {
         const totalExpenses = cat.expenses ? cat.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
         const remaining = cat.budget - totalExpenses;
         const color = CHART_COLORS[index % CHART_COLORS.length];
+        const isExpanded = state.expandedCategories.includes(cat.id);
+        
+        let expensesToRender = cat.expenses || [];
+        if (!isExpanded && expensesToRender.length > 5) {
+            expensesToRender = [...expensesToRender].sort((a,b) => b.date.toDate() - a.date.toDate()).slice(0, 5);
+        }
 
         return `
             <div class="category-card">
@@ -220,8 +231,12 @@ function renderCategorySection(monthlyBudget) {
                 <div class="category-card-content">
                     <div class="category-card-header">
                         <h4>${cat.name}</h4>
-                        <div class="actions">
-                            ${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="category" data-id="${cat.id}" title="Edit Category">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-category" data-id="${cat.id}" title="Delete Category">${ICONS.trash}</button>` : ''}
+                        <div class="actions options-menu">
+                            ${state.isEditor ? `<button class="btn btn-icon" data-action="toggle-options" data-id="cat-${cat.id}">${ICONS.options}</button>` : ''}
+                            <div class="options-dropdown ${state.activeOptionsMenu === `cat-${cat.id}` ? 'visible' : ''}">
+                                <button class="btn" data-action="edit-item" data-type="category" data-id="${cat.id}">${ICONS.edit} Edit</button>
+                                <button class="btn" data-action="delete-category" data-id="${cat.id}" style="color: var(--danger);">${ICONS.trash} Delete</button>
+                            </div>
                         </div>
                     </div>
                     <div class="category-budget-info">
@@ -231,7 +246,7 @@ function renderCategorySection(monthlyBudget) {
                     </div>
                     ${renderProgressBar(totalExpenses, cat.budget)}
                     <ul class="expense-list">
-                        ${cat.expenses && cat.expenses.map(exp => {
+                        ${expensesToRender.map(exp => {
                             const isEditingExp = state.editingItem?.type === 'expense' && state.editingItem.id === exp.id;
                             if (isEditingExp) {
                                 return `<li style="padding: 1rem; background-color: var(--bg-med); border-radius: var(--border-radius); border: 1px solid var(--border-color);"><form class="edit-expense-form" data-category-id="${cat.id}" data-expense-id="${exp.id}"><input type="text" name="description" value="${exp.description}" placeholder="Description" required><div class="form-grid"><input type="number" name="amount" value="${exp.amount}" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(exp.date)}" min="${toInputDate(monthlyBudget.approvalDate)}" required></div><div class="custom-file-input"><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><label class="file-input-label"><span class="file-input-text">Upload receipt...</span><span class="file-input-button">Choose File</span></label></div>${exp.receiptUrl ? `<div style="margin-top: 0.25rem; font-size: 0.75rem;">Current: <a href="${exp.receiptUrl}" target="_blank" class="btn-link">${exp.receiptName || 'View Receipt'}</a></div>` : ''}<div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary btn-sm" ${state.isUploading ? 'disabled' : ''}>${state.isUploading ? '...' : 'Save'}</button><button type="button" data-action="cancel-edit" class="btn btn-sm">Cancel</button></div></form></li>`;
@@ -239,6 +254,7 @@ function renderCategorySection(monthlyBudget) {
                             return `<li class="expense-item"><div class="details"><span>${exp.description}</span><span class="date">${formatDate(exp.date)}</span></div><div class="actions"><span>${formatCurrency(exp.amount)}</span>${exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" class="btn btn-icon" title="View Receipt">${ICONS.receipt}</a>` : ''}${state.isEditor ? `<button class="btn btn-icon" data-action="edit-item" data-type="expense" data-category-id="${cat.id}" data-id="${exp.id}" title="Edit Expense">${ICONS.edit}</button><button class="btn btn-icon" style="color: var(--danger);" data-action="delete-expense" data-category-id="${cat.id}" data-expense-id="${exp.id}" title="Delete Expense">${ICONS.trash}</button>` : ''}</div></li>`;
                         }).join('') || `<li class="text-sm text-gray-400">No expenses added yet.</li>`}
                     </ul>
+                    ${(cat.expenses || []).length > 5 ? `<button class="btn btn-sm" data-action="toggle-expand-category" data-id="${cat.id}">${isExpanded ? 'Show Less' : `Show All ${cat.expenses.length} Expenses`}</button>` : ''}
                     ${state.isEditor ? (state.showAddExpenseFormFor === cat.id ? `<form class="add-expense-form" data-category-id="${cat.id}"><input type="text" name="description" placeholder="New expense..." required><div class="form-grid"><input type="number" name="amount" placeholder="Amount" required><input type="date" name="date" value="${toInputDate(null)}" min="${toInputDate(monthlyBudget.approvalDate)}" required></div><div class="custom-file-input"><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"><label class="file-input-label"><span class="file-input-text">Upload receipt...</span><span class="file-input-button">Choose File</span></label></div><div style="display:flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-sm btn-primary" ${state.isUploading ? 'disabled' : ''}>${ICONS.plus} ${state.isUploading ? '...' : 'Add'}</button><button type="button" class="btn btn-sm" data-action="toggle-add-expense" data-id="">Cancel</button></div></form>` : `<button class="btn btn-sm" data-action="toggle-add-expense" data-id="${cat.id}">${ICONS.plus} Add Expense</button>`) : ''}
                 </div>
             </div>`;
@@ -246,7 +262,7 @@ function renderCategorySection(monthlyBudget) {
 
     return `
         <div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
                 <h3 style="font-size: 1.5rem; font-weight: 700; margin:0;">Categories</h3>
                 <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
                     <span style="color: var(--text-med);">Sort by:</span>
@@ -255,7 +271,7 @@ function renderCategorySection(monthlyBudget) {
                     <button class="btn" data-action="sort" data-key="used" title="Sort by Used Amount">Used ${state.sortConfig.key === 'used' ? (state.sortConfig.direction === 'asc' ? ICONS.sortUp : ICONS.sortDown) : ''}</button>
                 </div>
             </div>
-            ${state.isEditor ? `<form id="add-category-form" class="card" style="margin-bottom: 1.5rem;"><div class="form-grid"><input type="text" name="name" placeholder="New category name" required><input type="number" name="budget" placeholder="Budget" required></div><button type="submit" class="btn btn-primary" style="margin-top: 1rem;">${ICONS.plus} Add Category</button></form>` : ''}
+            ${state.isEditor ? (state.showAddCategoryForm ? `<form id="add-category-form" class="card" style="margin-bottom: 1.5rem;"><div class="form-grid"><input type="text" name="name" placeholder="New category name" required><input type="number" name="budget" placeholder="Budget" required></div><div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button type="submit" class="btn btn-primary">${ICONS.plus} Add Category</button><button type="button" class="btn" data-action="toggle-add-category">Cancel</button></div></form>` : `<button class="btn btn-primary" style="width: 100%; margin-bottom: 1.5rem;" data-action="toggle-add-category">${ICONS.plus} Add Category</button>`) : ''}
             <div class="category-list">${categoryListHtml}</div>
         </div>`;
 }
@@ -402,9 +418,19 @@ function attachEventListeners() {
 
     appContainer.onclick = function(e) {
         const target = e.target.closest('[data-action], button, a');
-        if (!target) return;
+        if (!target) {
+            if (state.activeOptionsMenu) {
+                state.activeOptionsMenu = null;
+                render();
+            }
+            return;
+        }
         
         const action = target.dataset.action;
+
+        if (action !== 'toggle-options') {
+            state.activeOptionsMenu = null;
+        }
 
         if (target.matches('a[data-view]')) { e.preventDefault(); state.authView = target.dataset.view; render(); }
         else if (target.id === 'logout-btn') { handleLogout(); }
@@ -419,6 +445,17 @@ function attachEventListeners() {
         else if (action === 'cancel-edit') { state.editingItem = null; render(); }
         else if (action === 'back-to-all-categories') { state.selectedCategoryId = null; render(); }
         else if (action === 'toggle-add-expense') { state.showAddExpenseFormFor = target.dataset.id; render(); }
+        else if (action === 'toggle-add-category') { state.showAddCategoryForm = !state.showAddCategoryForm; render(); }
+        else if (action === 'toggle-options') { state.activeOptionsMenu = state.activeOptionsMenu === target.dataset.id ? null : target.dataset.id; render(); }
+        else if (action === 'toggle-expand-category') {
+            const catId = target.dataset.id;
+            if (state.expandedCategories.includes(catId)) {
+                state.expandedCategories = state.expandedCategories.filter(id => id !== catId);
+            } else {
+                state.expandedCategories.push(catId);
+            }
+            render();
+        }
         else if (action === 'sort') {
             const key = target.dataset.key;
             if (state.sortConfig.key === key) {
@@ -559,7 +596,7 @@ async function handleFormSubmit(form) {
                     throw new Error(`Budget exceeds limit. You have ${formatCurrency(remainingBudget)} remaining to allocate.`);
                 }
                 await addDoc(collection(db, `users/${state.user.uid}/categories`), { name: data.name, budget: Number(data.budget), monthlyBudgetId: state.selectedMonthId, owner: state.user.uid, expenses: [] });
-                form.reset();
+                state.showAddCategoryForm = false;
                 break;
             }
             default:
